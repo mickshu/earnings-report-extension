@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>投资助手</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 顶部导航栏 -->
+    <header class="header">
+      <div class="header-left">
+        <span class="logo">📈</span>
+        <h1 class="title">投资助手</h1>
+      </div>
+      <div class="header-right">
+        <button id="btn-toc" class="icon-btn" title="纲要导航">📑</button>
+        <button id="btn-settings" class="icon-btn" title="设置">⚙️</button>
+      </div>
+    </header>
+
+    <!-- 纲要导航面板（可收起，仅解读报告标签下显示） -->
+    <nav id="toc-panel" class="toc-panel" style="display:none">
+      <div class="toc-header">
+        <span class="toc-title">📑 报告纲要</span>
+        <button id="btn-toc-close" class="icon-btn toc-close-btn">✕</button>
+      </div>
+      <ul id="toc-list" class="toc-list"></ul>
+    </nav>
+
+    <!-- 标签栏（五个主标签） -->
+    <nav class="tab-bar">
+      <button class="tab active" data-tab="hotspot">🔥 热点</button>
+      <button class="tab" data-tab="screener">🎯 选股器</button>
+      <button class="tab" data-tab="valuation">🧮 估值</button>
+      <button class="tab" data-tab="analysis">📊 财报解读</button>
+      <button class="tab" data-tab="stock-analysis">🔎 股票分析</button>
+      <button class="tab" data-tab="chat">💬 对话</button>
+    </nav>
+
+    <!-- ==================== 热点信息面板 ==================== -->
+    <section id="panel-hotspot" class="panel active">
+      <!-- 子标签切换：行业热点 / 公司资讯 -->
+      <div class="hs-sub-tabs">
+        <button class="hs-sub-tab active" data-subtab="industry">🔥 行业热点</button>
+        <button class="hs-sub-tab" data-subtab="company">🏢 公司资讯</button>
+      </div>
+
+      <!-- ===== 行业热点子面板 ===== -->
+      <div id="hs-industry-panel" class="hs-sub-panel active">
+        <div class="hs-container">
+          <!-- 顶部控制区 -->
+          <div class="hs-controls">
+            <div class="hs-controls-left">
+              <span class="hs-update-info" id="hs-update-info">尚未加载</span>
+              <button id="btn-hs-refresh" class="icon-btn" title="刷新">🔄</button>
+            </div>
+            <div class="hs-controls-right">
+              <button id="btn-hs-config" class="icon-btn" title="数据源配置">⚙️</button>
+              <button id="btn-hs-filter" class="icon-btn" title="关键词过滤">🔍</button>
+            </div>
+          </div>
+
+          <!-- 领域过滤标签 -->
+          <div class="hs-filter-chips">
+            <button class="hs-chip active" data-domain="all">全部</button>
+            <button class="hs-chip" data-domain="semiconductor">💠 半导体</button>
+            <button class="hs-chip" data-domain="new-energy">⚡ 新能源</button>
+            <button class="hs-chip" data-domain="ai-tech">🤖 AI科技</button>
+            <button class="hs-chip" data-domain="robot">🦾 机器人</button>
+            <button class="hs-chip" data-domain="nuclear">☢️ 核电</button>
+            <button class="hs-chip" data-domain="iran">⚔️ 伊朗战况</button>
+          </div>
+
+          <!-- 热点列表 -->
+          <div id="hs-list" class="hs-list">
+            <div class="hs-empty">
+              <p>🔥 点击 🔄 加载热点信息</p>
+              <p class="hs-empty-hint">聚焦 半导体 · 新能源 · AI科技 · 机器人 · 核电 · 伊朗战况</p>
+            </div>
+          </div>
+
+          <!-- 加载中 -->
+          <div id="hs-loading" class="loading-state" style="display:none">
+            <div class="spinner"></div>
+            <p id="hs-loading-text">正在获取热点信息...</p>
+          </div>
+        </div>
+
+        <!-- 数据源配置弹窗 -->
+        <div id="hs-config-modal" class="hs-modal" style="display:none">
+          <div class="hs-modal-content">
+            <div class="hs-modal-header">
+              <h3>⚙️ 数据源配置</h3>
+              <button id="btn-hs-config-close" class="icon-btn">✕</button>
+            </div>
+            <div class="hs-modal-body">
+              <div class="hs-config-group">
+                <label class="hs-config-label">自动刷新间隔（分钟）</label>
+                <input id="hs-refresh-interval" type="number" class="hs-config-input" value="5" min="1" max="60">
+              </div>
+              <div class="hs-config-group">
+                <label class="hs-config-label">数据源列表（每行一个URL）</label>
+                <textarea id="hs-sources" class="hs-config-textarea" rows="8" placeholder="内置数据源无需配置&#10;可添加自定义RSS/JSON API地址"></textarea>
+              </div>
+              <div class="hs-config-group">
+                <label class="hs-config-label">内置数据源</label>
+                <div class="hs-built-in-sources">
+                  <label class="hs-source-toggle">
+                    <input type="checkbox" id="hs-src-cls" checked> 财联社电报 API
+                  </label>
+                  <label class="hs-source-toggle">
+                    <input type="checkbox" id="hs-src-eastmoney" checked> 东方财富7×24 API
+                  </label>
+                </div>
+              </div>
+              <div class="hs-config-group">
+                <label class="hs-config-label">RSS 数据源（勾选启用）</label>
+                <div id="hs-rss-sources" class="hs-rss-sources">
+                  <!-- 动态填充 -->
+                </div>
+              </div>
+              <div class="hs-config-group">
+                <label class="hs-config-label">过滤关键词（每行一个，可选）</label>
+                <textarea id="hs-extra-keywords" class="hs-config-textarea" rows="4" placeholder="添加额外过滤关键词&#10;如：光刻机、EUV、HBM"></textarea>
+              </div>
+            </div>
+            <div class="hs-modal-footer">
+              <button id="btn-hs-config-cancel" class="btn btn-secondary">取消</button>
+              <button id="btn-hs-config-save" class="btn btn-primary">💾 保存</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 关键词过滤弹窗 -->
+        <div id="hs-filter-modal" class="hs-modal" style="display:none">
+          <div class="hs-modal-content">
+            <div class="hs-modal-header">
+              <h3>🔍 关键词搜索</h3>
+              <button id="btn-hs-filter-close" class="icon-btn">✕</button>
+            </div>
+            <div class="hs-modal-body">
+              <input id="hs-search-input" type="text" class="hs-config-input" placeholder="输入关键词搜索，如：光刻机、制裁、涨停">
+              <div id="hs-search-results" class="hs-search-results"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 公司资讯子面板 ===== -->
+      <div id="hs-company-panel" class="hs-sub-panel">
+        <div class="hs-container">
+          <!-- 顶部控制区 -->
+          <div class="hs-controls">
+            <div class="hs-controls-left">
+              <span class="hs-update-info" id="hs-company-update-info">尚未加载</span>
+              <button id="btn-hs-company-refresh" class="icon-btn" title="刷新公司资讯">🔄</button>
+            </div>
+            <div class="hs-controls-right">
+              <button id="btn-hs-watchlist" class="icon-btn" title="前往设置管理关注公司">⚙️</button>
+            </div>
+          </div>
+
+          <!-- 关注公司标签 -->
+          <div id="hs-company-chips" class="hs-filter-chips">
+            <button class="hs-chip active" data-company="all">全部</button>
+            <!-- 动态填充关注公司 -->
+          </div>
+
+          <!-- 资讯/公告二级标签 -->
+          <div class="hs-company-type-tabs">
+            <button class="hs-type-tab active" data-type="news">📰 资讯</button>
+            <button class="hs-type-tab" data-type="announcement">📋 公告</button>
+          </div>
+
+          <!-- 公司资讯/公告列表 -->
+          <div id="hs-company-list" class="hs-list">
+            <div class="hs-empty">
+              <p>📊 暂无关注公司资讯</p>
+              <p class="hs-empty-hint">请前往设置页面添加关注公司</p>
+            </div>
+          </div>
+
+          <!-- 加载中 -->
+          <div id="hs-company-loading" class="loading-state" style="display:none">
+            <div class="spinner"></div>
+            <p id="hs-company-loading-text">正在获取公司资讯...</p>
+          </div>
+        </div>
+
+        <!-- 关注公司管理弹窗 -->
+        <div id="hs-watchlist-modal" class="hs-modal" style="display:none">
+          <div class="hs-modal-content">
+            <div class="hs-modal-header">
+              <h3>⭐ 关注公司管理</h3>
+              <button id="btn-hs-watchlist-close" class="icon-btn">✕</button>
+            </div>
+            <div class="hs-modal-body">
+              <div class="hs-config-group">
+                <label class="hs-config-label">添加关注公司（输入股票代码或名称）</label>
+                <div class="hs-watchlist-add-row">
+                  <input id="hs-watchlist-input" type="text" class="hs-config-input" placeholder="如：688012、中微公司、AMEC">
+                  <button id="btn-hs-watchlist-add" class="btn btn-primary" style="flex-shrink:0">➕ 添加</button>
+                </div>
+                <!-- 搜索提示 -->
+                <div id="hs-watchlist-suggest" class="stock-suggest" style="display:none"></div>
+              </div>
+              <div class="hs-config-group">
+                <label class="hs-config-label">已关注公司</label>
+                <div id="hs-watchlist-tags" class="hs-watchlist-tags">
+                  <!-- 动态填充 -->
+                </div>
+              </div>
+            </div>
+            <div class="hs-modal-footer">
+              <button id="btn-hs-watchlist-done" class="btn btn-primary">完成</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 选股器面板 ==================== -->
+    <section id="panel-screener" class="panel">
+      <div class="screener-container">
+        <!-- 策略选择区 - 紧凑横滑 chip 条 -->
+        <div class="screener-strategies">
+          <div class="strategy-chips">
+            <button class="strategy-chip active" data-strategy="graham" title="深度价值 · 安全边际">🏛 格雷厄姆</button>
+            <button class="strategy-chip" data-strategy="buffett" title="护城河 · 优质企业">🏰 巴菲特</button>
+            <button class="strategy-chip" data-strategy="lynch" title="PEG · 成长价值">🔍 林奇</button>
+            <button class="strategy-chip" data-strategy="fisher" title="长期成长 · 15要点">🌱 费雪</button>
+            <button class="strategy-chip" data-strategy="munger" title="理性 · 逆向思维">⚖️ 芒格</button>
+            <button class="strategy-chip" data-strategy="composite" title="多策略融合 · 严选">🌟 综合</button>
+            <button id="btn-strategy-toggle" class="strategy-chip strategy-info-toggle" title="展开/收起策略详情">▾</button>
+          </div>
+        </div>
+
+        <!-- 策略详情与条件（默认折叠） -->
+        <div id="strategy-detail" class="strategy-detail" style="display:none">
+          <div class="strategy-detail-header">
+            <h3 id="strategy-detail-title">格雷厄姆 - 深度价值策略</h3>
+          </div>
+          <div id="strategy-detail-body" class="strategy-detail-body">
+            <!-- 动态填充 -->
+          </div>
+        </div>
+
+        <!-- 选股输入区 - 带搜索提示 -->
+        <div class="screener-input-area">
+          <h3 class="screener-section-title">📝 输入候选股票</h3>
+          <div class="screener-input-wrap">
+            <textarea id="screener-input" placeholder="输入股票代码或名称，如：贵州茅台、600519&#10;支持逗号/换行分隔多只股票&#10;或输入行业/条件：白酒龙头股、市值超500亿且ROE>15%" rows="4"></textarea>
+            <!-- 搜索下拉提示 -->
+            <div id="stock-suggest" class="stock-suggest" style="display:none">
+              <div class="stock-suggest-hint">🔍 实时匹配中...</div>
+            </div>
+          </div>
+          <!-- 已选股票标签 -->
+          <div id="stock-tags" class="stock-tags"></div>
+          <div class="screener-input-actions">
+            <button id="btn-screener-clear" class="btn btn-secondary">清空</button>
+            <button id="btn-screener-run" class="btn btn-primary">🚀 开始选股分析</button>
+          </div>
+        </div>
+
+        <!-- 选股结果 -->
+        <div id="screener-result" class="screener-result" style="display:none">
+          <div class="screener-result-header">
+            <h3>🎯 选股分析报告</h3>
+            <div class="result-actions">
+              <button id="btn-screener-export" class="icon-btn" title="导出 Markdown">💾</button>
+              <button id="btn-screener-copy" class="icon-btn" title="复制">📋</button>
+            </div>
+          </div>
+          <article id="screener-content" class="report-content"></article>
+          <div class="result-footer">
+            <button id="btn-screener-chat" class="btn btn-primary">💬 对选股结果继续提问 →</button>
+          </div>
+        </div>
+
+        <!-- 选股loading -->
+        <div id="screener-loading" class="loading-state" style="display:none">
+          <div class="spinner"></div>
+          <p id="screener-loading-text">正在基于大师策略分析候选股票...</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 估值计算器面板 ==================== -->
+    <section id="panel-valuation" class="panel">
+      <div class="val-container">
+        <!-- 搜索股票 -->
+        <div class="val-search-area">
+          <h3 class="screener-section-title">🔍 查询公司</h3>
+          <div class="val-search-wrap">
+            <input id="val-search-input" type="text" class="val-search-input" placeholder="输入股票代码或名称，如：贵州茅台、600519">
+            <div id="val-suggest" class="stock-suggest" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- 股票信息卡 -->
+        <div id="val-stock-card" class="val-stock-card" style="display:none">
+          <div class="val-stock-header">
+            <div class="val-stock-title">
+              <span id="val-stock-name" class="val-stock-name">--</span>
+              <span id="val-stock-code" class="val-stock-code">--</span>
+              <span id="val-stock-industry" class="val-stock-industry"></span>
+            </div>
+            <div class="val-stock-price-area">
+              <span id="val-stock-price" class="val-stock-price">--</span>
+              <span id="val-stock-change" class="val-stock-change">--</span>
+            </div>
+          </div>
+          <!-- 估值指标 -->
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">PE(TTM)</span><span id="val-metric-pe" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">PB</span><span id="val-metric-pb" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">市值</span><span id="val-metric-mv" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">ROE</span><span id="val-metric-roe" class="val-metric-value">--</span></div>
+          </div>
+          <!-- 盈利能力指标 -->
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">EPS</span><span id="val-metric-eps" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">BPS</span><span id="val-metric-bps" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">毛利率</span><span id="val-metric-gm" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">净利率</span><span id="val-metric-nm" class="val-metric-value">--</span></div>
+          </div>
+          <!-- 成长/财务健康指标 -->
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">营收增速</span><span id="val-metric-revg" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">利润增速</span><span id="val-metric-npg" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">负债率</span><span id="val-metric-dar" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">ROIC</span><span id="val-metric-roic" class="val-metric-value">--</span></div>
+          </div>
+          <!-- 现金流指标 -->
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">经营CF(亿)</span><span id="val-metric-ocf" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">FCF(亿)</span><span id="val-metric-fcf" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">股利/股</span><span id="val-metric-dps" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">总股本(亿)</span><span id="val-metric-shares" class="val-metric-value">--</span></div>
+          </div>
+        </div>
+
+        <!-- 估值方法切换 -->
+        <div class="val-method-chips">
+          <button class="val-method-chip active" data-method="dcf">💵 DCF折现</button>
+          <button class="val-method-chip" data-method="graham">🏛 格雷厄姆</button>
+          <button class="val-method-chip" data-method="ddm">💳 DDM股息</button>
+          <button class="val-method-chip" data-method="pe">📐 相对PE</button>
+          <button class="val-method-chip" data-method="eva">📊 EVA经济附加值</button>
+        </div>
+
+        <!-- 估值参数表单（动态切换） -->
+        <div id="val-params" class="val-params">
+          <!-- 动态填充 -->
+        </div>
+
+        <!-- 计算按钮 -->
+        <div class="val-actions">
+          <button id="btn-val-reset" class="btn btn-secondary">重置参数</button>
+          <button id="btn-val-calc" class="btn btn-primary">🧮 计算内在价值</button>
+        </div>
+
+        <!-- 估值结果 -->
+        <div id="val-result" class="val-result" style="display:none">
+          <!-- 动态填充 -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 财报解读面板 ==================== -->
+    <section id="panel-analysis" class="panel">
+      <div class="analysis-container">
+        <!-- 股票代码搜索区 -->
+        <div class="analysis-search-area">
+          <h3 class="screener-section-title">🔍 输入股票代码查询财报</h3>
+          <div class="analysis-search-wrap">
+            <input id="analysis-search-input" type="text" class="val-search-input" placeholder="输入股票代码或名称，如：贵州茅台、600519">
+            <div id="analysis-suggest" class="stock-suggest" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- 财报列表区 -->
+        <div id="analysis-report-list" class="analysis-report-list" style="display:none">
+          <div class="analysis-report-list-header">
+            <h3 id="analysis-stock-title">财报列表</h3>
+            <span id="analysis-stock-code" class="val-stock-code"></span>
+          </div>
+          <div id="analysis-report-items" class="analysis-report-items">
+            <!-- 动态填充 -->
+          </div>
+        </div>
+
+        <!-- 或分隔线 -->
+        <div class="analysis-divider">
+          <span class="analysis-divider-line"></span>
+          <span class="analysis-divider-text">或</span>
+          <span class="analysis-divider-line"></span>
+        </div>
+
+        <!-- PDF / 手动粘贴入口 -->
+        <div class="analysis-alt-entry">
+          <button id="btn-open-pdf" class="btn btn-secondary" title="在浏览器中打开财报PDF，系统将自动检测">📄 打开财报 PDF</button>
+          <button id="btn-paste" class="btn btn-secondary">📋 手动粘贴财报文本</button>
+        </div>
+      </div>
+
+      <!-- 手动粘贴输入区域 -->
+      <div id="paste-area" style="display:none">
+        <textarea id="paste-input" placeholder="请粘贴财报文本内容..." rows="10"></textarea>
+        <div class="paste-actions">
+          <button id="btn-paste-cancel" class="btn btn-secondary">取消</button>
+          <button id="btn-paste-submit" class="btn btn-primary">开始解读</button>
+        </div>
+      </div>
+
+      <!-- 正在提取/分析中 -->
+      <div id="loading" class="loading-state" style="display:none">
+        <div class="spinner"></div>
+        <p id="loading-text">正在提取 PDF 文本内容...</p>
+      </div>
+
+      <!-- 分析结果 -->
+      <div id="analysis-result" style="display:none">
+        <div class="result-header">
+          <h2 id="report-title">财报解读报告</h2>
+          <div class="result-actions">
+            <button id="btn-regenerate" class="icon-btn" title="重新分析">🔄</button>
+            <button id="btn-export-md" class="icon-btn" title="导出 Markdown">💾</button>
+            <button id="btn-copy" class="icon-btn" title="复制报告">📋</button>
+          </div>
+        </div>
+        <article id="report-content" class="report-content"></article>
+        <div class="result-footer">
+          <button id="btn-chat-followup" class="btn btn-primary">💬 继续对话深入分析 →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 股票分析面板 ==================== -->
+    <section id="panel-stock-analysis" class="panel">
+      <div class="sa-container">
+        <!-- 搜索股票 -->
+        <div class="sa-search-area">
+          <h3 class="screener-section-title">🔎 输入股票代码进行投资分析</h3>
+          <div class="sa-search-wrap">
+            <input id="sa-search-input" type="text" class="val-search-input" placeholder="输入股票代码或名称，如：贵州茅台、600519">
+            <div id="sa-suggest" class="stock-suggest" style="display:none"></div>
+          </div>
+          <p class="sa-search-hint">基于投资公司分析框架，结合当前股价给出投资策略建议</p>
+        </div>
+
+        <!-- 分析框架说明（折叠） -->
+        <details class="sa-framework-details">
+          <summary class="sa-framework-summary">📖 查看分析框架</summary>
+          <div class="sa-framework-body">
+            <div class="sa-framework-item">
+              <span class="sa-framework-num">1</span>
+              <div><strong>行业与商业模式</strong><br><small>行业天花板 · 竞争格局 · 护城河 · 商业模式</small></div>
+            </div>
+            <div class="sa-framework-item">
+              <span class="sa-framework-num">2</span>
+              <div><strong>财务稳健性</strong><br><small>ROE · 毛利率/净利率 · 现金流 · 资产负债</small></div>
+            </div>
+            <div class="sa-framework-item">
+              <span class="sa-framework-num">3</span>
+              <div><strong>管理层质量</strong><br><small>历史表现 · 激励机制 · 资本配置 · 企业文化</small></div>
+            </div>
+            <div class="sa-framework-item">
+              <span class="sa-framework-num">4</span>
+              <div><strong>估值分析</strong><br><small>DCF · PE/PB/PS · 安全边际</small></div>
+            </div>
+            <div class="sa-framework-item">
+              <span class="sa-framework-num">5</span>
+              <div><strong>核心风险</strong><br><small>政策 · 技术替代 · 宏观 · 关键人</small></div>
+            </div>
+            <div class="sa-framework-item">
+              <span class="sa-framework-num">6</span>
+              <div><strong>预期与触发点</strong><br><small>市场预期 · 未来催化剂</small></div>
+            </div>
+          </div>
+        </details>
+
+        <!-- 股票信息卡（选中后显示） -->
+        <div id="sa-stock-card" class="sa-stock-card" style="display:none">
+          <div class="sa-stock-header">
+            <div class="sa-stock-title">
+              <span id="sa-stock-name" class="val-stock-name">--</span>
+              <span id="sa-stock-code" class="val-stock-code">--</span>
+              <span id="sa-stock-industry" class="val-stock-industry"></span>
+            </div>
+            <div class="sa-stock-price-area">
+              <span id="sa-stock-price" class="val-stock-price">--</span>
+              <span id="sa-stock-change" class="val-stock-change">--</span>
+            </div>
+          </div>
+          <!-- 核心指标概览 -->
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">PE(TTM)</span><span id="sa-metric-pe" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">PB</span><span id="sa-metric-pb" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">市值</span><span id="sa-metric-mv" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">ROE</span><span id="sa-metric-roe" class="val-metric-value">--</span></div>
+          </div>
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">毛利率</span><span id="sa-metric-gm" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">净利率</span><span id="sa-metric-nm" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">营收增速</span><span id="sa-metric-revg" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">利润增速</span><span id="sa-metric-npg" class="val-metric-value">--</span></div>
+          </div>
+          <div class="val-stock-metrics">
+            <div class="val-metric"><span class="val-metric-label">负债率</span><span id="sa-metric-dar" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">ROIC</span><span id="sa-metric-roic" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">经营CF(亿)</span><span id="sa-metric-ocf" class="val-metric-value">--</span></div>
+            <div class="val-metric"><span class="val-metric-label">FCF(亿)</span><span id="sa-metric-fcf" class="val-metric-value">--</span></div>
+          </div>
+          <button id="btn-sa-start" class="btn btn-primary" style="width:100%;margin-top:10px">🚀 开始投资分析</button>
+        </div>
+      </div>
+
+      <!-- 分析loading -->
+      <div id="sa-loading" class="loading-state" style="display:none">
+        <div class="spinner"></div>
+        <p id="sa-loading-text">正在获取数据并分析...</p>
+      </div>
+
+      <!-- 分析结果 -->
+      <div id="sa-result" style="display:none">
+        <div class="result-header">
+          <h2 id="sa-report-title">股票分析报告</h2>
+          <div class="result-actions">
+            <button id="btn-sa-regenerate" class="icon-btn" title="重新分析">🔄</button>
+            <button id="btn-sa-export-md" class="icon-btn" title="导出 Markdown">💾</button>
+            <button id="btn-sa-copy" class="icon-btn" title="复制报告">📋</button>
+          </div>
+        </div>
+        <article id="sa-content" class="report-content"></article>
+        <div class="result-footer">
+          <button id="btn-sa-chat" class="btn btn-primary">💬 继续对话深入分析 →</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== AI对话面板 ==================== -->
+    <section id="panel-chat" class="panel">
+      <div id="chat-messages" class="chat-messages">
+        <div class="chat-welcome">
+          <p>💬 你可以就财报解读或选股结果继续提问，例如：</p>
+          <ul class="suggestion-list">
+            <li><button class="suggestion-btn" data-q="这家公司的护城河在哪里？">这家公司的护城河在哪里？</button></li>
+            <li><button class="suggestion-btn" data-q="用PEG估值法分析当前估值水平">用PEG估值法分析当前估值水平</button></li>
+            <li><button class="suggestion-btn" data-q="这些候选股票中哪个最值得投资？">这些候选股票中哪个最值得投资？</button></li>
+            <li><button class="suggestion-btn" data-q="芒格会怎么看这家公司？">芒格会怎么看这家公司？</button></li>
+          </ul>
+        </div>
+      </div>
+      <div class="chat-input-area">
+        <textarea id="chat-input" placeholder="输入问题，按 Enter 发送..." rows="2"></textarea>
+        <button id="btn-send" class="btn-send" title="发送">➤</button>
+      </div>
+    </section>
+
+    <!-- ==================== 设置面板 ==================== -->
+    <section id="panel-settings" class="panel" style="display:none">
+      <div class="settings-header">
+        <button id="btn-settings-back" class="icon-btn">←</button>
+        <h2>设置</h2>
+      </div>
+      
+      <!-- 设置子Tab -->
+      <nav class="settings-sub-tabs">
+        <button class="settings-sub-tab active" data-subtab="llm">🤖 大模型配置</button>
+        <button class="settings-sub-tab" data-subtab="watchlist">⭐ 关注公司</button>
+      </nav>
+      
+      <div class="settings-content">
+        <!-- ===== 大模型配置子面板 ===== -->
+        <div id="settings-llm-panel" class="settings-sub-panel active">
+          <!-- 模型服务列表 -->
+          <div class="setting-group">
+            <label class="setting-label">模型服务列表</label>
+            <div id="llm-services-list" class="llm-services-list">
+              <!-- 动态填充 -->
+            </div>
+            <button id="btn-add-llm-service" class="btn btn-secondary" style="width:100%;margin-top:8px">➕ 添加新服务</button>
+          </div>
+          
+          <!-- 当前编辑的服务配置 -->
+          <div id="llm-service-editor" class="llm-service-editor" style="display:none">
+            <div class="setting-group">
+              <label class="setting-label">服务名称</label>
+              <input id="llm-service-name" type="text" class="setting-input" placeholder="如：OpenAI主服务、DeepSeek备用">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">LLM 服务商</label>
+              <select id="llm-provider" class="setting-select">
+                <option value="openai">OpenAI (GPT-4)</option>
+                <option value="deepseek">DeepSeek</option>
+                <option value="zhipu">智谱 (GLM)</option>
+                <option value="qwen">通义千问</option>
+                <option value="custom">自定义 API</option>
+              </select>
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">API 地址</label>
+              <input id="llm-base-url" type="text" class="setting-input" placeholder="https://api.openai.com/v1">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">API Key</label>
+              <input id="llm-api-key" type="password" class="setting-input" placeholder="sk-...">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">模型名称</label>
+              <input id="llm-model" type="text" class="setting-input" placeholder="gpt-4o">
+            </div>
+            <div class="setting-group">
+              <label class="setting-label">
+                <input type="checkbox" id="llm-service-enabled" checked> 启用此服务
+              </label>
+            </div>
+            <div class="llm-editor-actions">
+              <button id="btn-cancel-llm-service" class="btn btn-secondary">取消</button>
+              <button id="btn-save-llm-service" class="btn btn-primary">💾 保存服务</button>
+            </div>
+          </div>
+          
+          <!-- 当前激活的服务 -->
+          <div class="setting-group" style="margin-top:16px">
+            <label class="setting-label">当前使用的模型服务</label>
+            <select id="llm-active-service" class="setting-select">
+              <!-- 动态填充 -->
+            </select>
+          </div>
+        </div>
+        
+        <!-- ===== 关注公司子面板 ===== -->
+        <div id="settings-watchlist-panel" class="settings-sub-panel">
+          <div class="setting-group">
+            <label class="setting-label">添加关注公司</label>
+            <div class="settings-watchlist-add-row">
+              <input id="settings-watchlist-input" type="text" class="setting-input" placeholder="输入股票代码或名称，如：688012、中微公司、AMEC">
+              <button id="btn-settings-watchlist-add" class="btn btn-primary" style="flex-shrink:0">➕ 添加</button>
+            </div>
+            <!-- 搜索提示 -->
+            <div id="settings-watchlist-suggest" class="stock-suggest" style="display:none"></div>
+          </div>
+          
+          <div class="setting-group">
+            <label class="setting-label">已关注公司</label>
+            <div id="settings-watchlist-tags" class="settings-watchlist-tags">
+              <!-- 动态填充 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 播报控制条（固定底部） -->
+    <div id="tts-bar" class="tts-bar" style="display:none">
+      <div class="tts-progress-wrap">
+        <div id="tts-progress" class="tts-progress"></div>
+      </div>
+      <div class="tts-controls">
+        <span id="tts-status" class="tts-status">播报中...</span>
+        <div class="tts-btns">
+          <button id="btn-tts-prev" class="tts-btn" title="上一段">⏮</button>
+          <button id="btn-tts-play" class="tts-btn tts-btn-main" title="暂停/播放">⏸</button>
+          <button id="btn-tts-next" class="tts-btn" title="下一段">⏭</button>
+          <button id="btn-tts-stop" class="tts-btn" title="停止播报">⏹</button>
+        </div>
+        <select id="tts-rate" class="tts-rate-select" title="语速">
+          <option value="0.8">0.8x</option>
+          <option value="1.0" selected>1.0x</option>
+          <option value="1.2">1.2x</option>
+          <option value="1.5">1.5x</option>
+          <option value="2.0">2.0x</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>
