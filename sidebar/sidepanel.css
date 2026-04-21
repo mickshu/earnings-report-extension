@@ -774,6 +774,132 @@ body {
   gap: 6px;
 }
 
+/* 股票信息卡子Tab */
+.sa-info-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 10px;
+}
+
+.sa-info-tab {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.sa-info-tab:hover {
+  color: var(--primary);
+}
+
+.sa-info-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  font-weight: 600;
+}
+
+.sa-info-sub-panel {
+  display: none;
+}
+
+.sa-info-sub-panel.active {
+  display: block;
+}
+
+/* K线图 */
+.sa-kline-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.sa-kline-select {
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.sa-kline-container {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.sa-kline-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 300px;
+  color: var(--text-hint);
+  font-size: 14px;
+}
+
+.sa-kline-container canvas {
+  display: block;
+  width: 100%;
+}
+
+/* 折叠的股票信息卡 */
+.sa-stock-card-collapsed {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+}
+
+.sa-collapse-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.sa-collapse-header:hover {
+  background: var(--surface-hover);
+}
+
+.sa-collapse-info {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sa-collapse-arrow {
+  font-size: 10px;
+  color: var(--text-hint);
+  transition: transform 0.25s;
+  flex-shrink: 0;
+}
+
+.sa-collapse-arrow.expanded {
+  transform: rotate(90deg);
+}
+
+.sa-collapse-body {
+  padding: 0 14px 14px;
+  border-top: 1px solid var(--border);
+}
+
 /* ==================== 财报解读 - Empty State (旧版兼容) ==================== */
 .empty-state {
   display: flex;
@@ -2782,6 +2908,93 @@ body {
   border-radius: 3px;
 }
 
+/* 情感筛选标签 */
+.hs-sentiment-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hs-sentiment-tab {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  border-radius: 16px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text-secondary);
+}
+
+.hs-sentiment-tab:hover {
+  border-color: var(--primary);
+  color: var(--text);
+}
+
+.hs-sentiment-tab.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+  font-weight: 600;
+}
+
+.hs-sentiment-tab.positive.active {
+  background: #e53935;
+  border-color: #e53935;
+}
+
+.hs-sentiment-tab.negative.active {
+  background: #43a047;
+  border-color: #43a047;
+}
+
+.hs-sentiment-tab.neutral.active {
+  background: #757575;
+  border-color: #757575;
+}
+
+/* 情感标签徽章 */
+.hs-sentiment-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.hs-sentiment-badge.positive {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef9a9a;
+}
+
+.hs-sentiment-badge.negative {
+  background: #e8f5e9;
+  color: #2e7d32;
+  border: 1px solid #a5d6a7;
+}
+
+.hs-sentiment-badge.neutral {
+  background: #f5f5f5;
+  color: #616161;
+  border: 1px solid #e0e0e0;
+}
+
+.hs-sentiment-badge.analyzing {
+  background: #fff3e0;
+  color: #ef6c00;
+  border: 1px solid #ffcc80;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 /* ======================== 关注公司管理 ======================== */
 .hs-watchlist-add-row {
   display: flex;
@@ -2873,4 +3086,106 @@ body {
 #hs-watchlist-suggest .stock-suggest-name {
   color: var(--text);
   font-weight: 500;
+}
+
+/* ======================== 数据管理样式 ======================== */
+
+.data-mgmt-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.data-mgmt-actions .btn {
+  flex: 1;
+  min-width: 120px;
+}
+
+.storage-info {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.storage-info-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.storage-info-item:last-child {
+  border-bottom: none;
+}
+
+.storage-info-label {
+  color: var(--text-secondary);
+}
+
+.storage-info-value {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* 缓存统计信息 */
+.cache-stats {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  font-size: 12px;
+  line-height: 1.8;
+  margin-bottom: 12px;
+}
+
+.cache-stat-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+}
+
+.cache-stat-item:last-child {
+  border-bottom: none;
+}
+
+.cache-stat-label {
+  color: var(--text-secondary);
+}
+
+.cache-stat-value {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.cache-stat-value.positive {
+  color: #e53935;
+}
+
+.cache-stat-value.negative {
+  color: #34a853;
+}
+
+.cache-stat-value.neutral {
+  color: var(--text-secondary);
+}
+
+.btn-danger {
+  background: var(--error);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.btn-danger:hover {
+  background: #c62828;
 }

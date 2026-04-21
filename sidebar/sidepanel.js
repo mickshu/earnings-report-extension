@@ -424,9 +424,283 @@ const DEFAULT_PROVIDERS = {
 
 // ======================== 股票分析常量 ========================
 
+/**
+ * 行业特征关键指标配置
+ * 根据不同行业特点，定义需要重点关注的特色指标
+ */
+const INDUSTRY_KEY_METRICS = {
+  // 半导体设备/材料
+  '半导体': {
+    name: '半导体行业',
+    metrics: [
+      { key: 'bb_ratio', name: 'Book-to-Bill Ratio (BB值)', desc: '订单出货比，>1表示行业景气，<1表示行业下行', threshold: '≥1.0为景气，<1.0为不景气' },
+      { key: 'r_and_d_ratio', name: '研发投入占比', desc: '研发费用/营收，半导体行业技术迭代快，高研发投入是竞争力保障', threshold: '≥15%为优秀，10-15%为良好，<10%需警惕' },
+      { key: 'gross_margin', name: '毛利率', desc: '半导体设备和设计公司毛利率通常较高', threshold: '≥40%为优秀，30-40%为良好，<30%需关注' },
+      { key: 'inventory_turnover', name: '存货周转率', desc: '半导体行业存货贬值风险高，周转率很重要', threshold: '≥4次/年为健康' },
+      { key: 'capacity_utilization', name: '产能利用率', desc: '制造环节的产能利用率直接影响盈利能力', threshold: '≥85%为满载，70-85%为正常，<70%产能过剩' },
+    ],
+    prompt: `## 半导体行业特色指标分析
+
+请重点分析以下半导体行业关键指标：
+
+1. **Book-to-Bill Ratio (BB值)**：
+   - BB值 = 订单额/出货额，是半导体行业景气度核心指标
+   - BB > 1.0：订单超过出货，行业景气向上
+   - BB < 1.0：订单不及出货，行业景气向下
+   - 请结合全球半导体BB值趋势和公司订单情况分析
+
+2. **研发投入占比**：
+   - 半导体是技术密集型行业，研发投入决定未来竞争力
+   - 分析研发费用/营收比例及趋势
+   - 对比国际同行（ASML、应用材料、台积电等）研发投入水平
+
+3. **毛利率分析**：
+   - 半导体设备/设计公司毛利率通常≥40%
+   - 制造/封测毛利率相对较低（20-35%）
+   - 分析毛利率变化趋势及与同行对比
+
+4. **存货周转**：
+   - 半导体产品更新换代快，存货贬值风险高
+   - 关注存货周转率、存货跌价准备计提情况
+   - 分析存货结构（原材料/在产品/产成品）
+
+5. **产能利用率**（如适用）：
+   - 制造/IDM企业需关注产能利用率
+   - ≥85%为满载，盈利能力强
+   - <70%可能存在产能过剩风险`
+  },
+  
+  // 新能源（光伏、锂电、风电）
+  '新能源': {
+    name: '新能源行业',
+    metrics: [
+      { key: 'capacity', name: '产能及产能利用率', desc: '产能规模和利用率直接影响收入和盈利', threshold: '≥80%为健康' },
+      { key: 'cost_per_watt', name: '单位成本（元/W）', desc: '光伏组件/电池片单位成本，衡量制造效率', threshold: '行业平均约0.8-1.2元/W' },
+      { key: 'efficiency', name: '转换效率', desc: '光伏电池转换效率是核心竞争力', threshold: 'PERC≥23%，TOPCon≥25%，HJT≥25.5%' },
+      { key: 'shipment_growth', name: '出货量增速', desc: '新能源行业高增长特征，出货量增速很重要', threshold: '≥30%为高增长' },
+      { key: 'subsidy_dependency', name: '补贴依赖度', desc: '补贴收入/营收比例，衡量市场化竞争力', threshold: '<10%为市场化程度高' },
+    ],
+    prompt: `## 新能源行业特色指标分析
+
+请重点分析以下新能源行业关键指标：
+
+1. **产能及产能利用率**：
+   - 分析公司现有产能、在建产能、规划产能
+   - 产能利用率≥80%为健康，<70%存在产能过剩风险
+   - 对比行业产能利用率水平
+
+2. **单位成本（元/W）**：
+   - 光伏组件/电池片的单位制造成本
+   - 成本下降趋势和技术进步带来的成本优势
+   - 与行业龙头对比成本竞争力
+
+3. **转换效率**（光伏）：
+   - 电池/组件转换效率是核心竞争指标
+   - PERC、TOPCon、HJT、钙钛矿等不同技术路线效率对比
+   - 效率提升对度电成本的影响
+
+4. **出货量增速**：
+   - 新能源行业典型高增长特征
+   - 分析出货量同比增速及市占率变化
+   - 对比行业整体增速判断竞争力
+
+5. **补贴依赖度**：
+   - 补贴收入占总营收比例
+   - 平价上网后的盈利能力
+   - 应收账款中补贴欠款规模`
+  },
+  
+  // 医药生物
+  '医药': {
+    name: '医药生物行业',
+    metrics: [
+      { key: 'r_and_d_pipeline', name: '研发管线价值', desc: '在研药物数量和阶段（临床I/II/III期）', threshold: 'III期药物价值最高' },
+      { key: 'r_and_d_ratio', name: '研发投入占比', desc: '创新药企研发投入通常≥20%', threshold: '≥20%为创新导向，<10%为仿制药导向' },
+      { key: 'patent_cliff', name: '专利悬崖风险', desc: '核心产品专利到期时间', threshold: '距专利到期≥5年安全' },
+      { key: 'generic_ratio', name: '仿制药/创新药比例', desc: '衡量企业创新转型程度', threshold: '创新药占比≥50%为转型成功' },
+      { key: 'vbp_impact', name: '集采影响度', desc: '集采品种收入占比', threshold: '<30%为集采风险可控' },
+    ],
+    prompt: `## 医药生物行业特色指标分析
+
+请重点分析以下医药行业关键指标：
+
+1. **研发管线价值**：
+   - 在研药物数量及所处临床阶段（I/II/III期）
+   - III期临床药物价值最高，成功率高
+   - 管线覆盖治疗领域和市场空间
+
+2. **研发投入占比**：
+   - 创新药企研发投入通常≥20%
+   - 研发费用资本化比例（谨慎对待高资本化）
+   - 研发人员数量和结构
+
+3. **专利悬崖风险**：
+   - 核心产品专利到期时间表
+   - 专利到期后仿制药冲击对收入的影响
+   - 是否有新一代产品接力
+
+4. **仿制药vs创新药比例**：
+   - 创新药收入占比及趋势
+   - 仿制药集采降价压力
+   - 企业创新转型进展
+
+5. **集采（VBP）影响**：
+   - 参与集采品种数量和中标情况
+   - 集采品种收入占比
+   - 集采后毛利率变化`
+  },
+  
+  // 消费（食品饮料、白酒、零售）
+  '消费': {
+    name: '消费行业',
+    metrics: [
+      { key: 'same_store_growth', name: '同店增长', desc: '零售行业同店销售额增速', threshold: '≥5%为健康增长' },
+      { key: 'channel_inventory', name: '渠道库存', desc: '经销商库存水平，反映真实终端需求', threshold: '库存/月销量<2为健康' },
+      { key: 'brand_premium', name: '品牌溢价', desc: '产品提价能力和品牌附加值', threshold: '毛利率≥50%为强品牌' },
+      { key: 'repurchase_rate', name: '复购率', desc: '消费者重复购买比例', threshold: '≥40%为高粘性' },
+      { key: 'region_expansion', name: '区域扩张进度', desc: '全国化/全球化扩张进展', threshold: '新区域增速≥30%为扩张顺利' },
+    ],
+    prompt: `## 消费行业特色指标分析
+
+请重点分析以下消费行业关键指标：
+
+1. **同店增长**（零售/餐饮）：
+   - 同店销售额增速（排除新开店影响）
+   - 同店增长>5%为健康
+   - 客流量vs客单价拆分
+
+2. **渠道库存**：
+   - 经销商库存水平（库存/月销量）
+   - <2个月为健康，>3个月存在渠道压货风险
+   - 渠道库存变化趋势
+
+3. **品牌溢价**：
+   - 产品提价能力和频率
+   - 高端产品占比及增速
+   - 毛利率水平（≥50%为强品牌）
+
+4. **复购率/用户粘性**：
+   - 消费者重复购买比例
+   - 会员体系和忠诚度
+   - 用户生命周期价值
+
+5. **区域扩张**：
+   - 全国化/全球化进展
+   - 新区域门店增速和单店盈利
+   - 区域收入结构变化`
+  },
+  
+  // 金融（银行、保险、券商）
+  '金融': {
+    name: '金融行业',
+    metrics: [
+      { key: 'npim', name: '净息差（NIM）', desc: '银行核心盈利指标，贷款收益-存款成本', threshold: '≥1.8%为健康，<1.5%承压' },
+      { key: 'npl_ratio', name: '不良贷款率', desc: '银行资产质量核心指标', threshold: '<1.5%为优秀，1.5-2%为关注，>2%为高风险' },
+      { key: 'provision_coverage', name: '拨备覆盖率', desc: '风险缓冲能力', threshold: '≥150%为达标，≥200%为充裕' },
+      { key: 'core_tier1', name: '核心一级资本充足率', desc: '银行资本充足程度', threshold: '≥8.5%为安全' },
+      { key: 'ev_growth', name: '内含价值增速（保险）', desc: '保险公司真实价值增长', threshold: '≥10%为健康增长' },
+    ],
+    prompt: `## 金融行业特色指标分析
+
+请重点分析以下金融行业关键指标：
+
+1. **净息差（NIM）**（银行）：
+   - 净息差 =（利息收入-利息支出）/生息资产平均余额
+   - ≥1.8%为健康水平，<1.5%盈利承压
+   - LPR下行周期净息差趋势
+
+2. **不良贷款率**（银行）：
+   - <1.5%为优秀，1.5-2%需关注，>2%高风险
+   - 不良生成率和迁徙率
+   - 不良认定标准是否严格
+
+3. **拨备覆盖率**（银行）：
+   - =贷款减值准备/不良贷款
+   - ≥150%监管要求，≥200%安全边际充裕
+   - 拨备计提对利润的影响
+
+4. **资本充足率**（银行）：
+   - 核心一级资本充足率≥8.5%
+   - 资本补充需求和方式（定增/可转债/永续债）
+   - 资本约束对资产扩张的影响
+
+5. **内含价值增速**（保险）：
+   - 内含价值（EV）是保险公司真实价值
+   - EV增速≥10%为健康
+   - 新业务价值（NBV）增速和Margin`
+  },
+  
+  // 互联网/软件
+  '互联网': {
+    name: '互联网/软件行业',
+    metrics: [
+      { key: 'mau_dau', name: 'MAU/DAU', desc: '月活/日活跃用户数', threshold: 'DAU/MAU≥40%为高粘性' },
+      { key: 'arpu', name: 'ARPU', desc: '单用户平均收入', threshold: '同比增长≥10%为健康' },
+      { key: 'cac_ltv', name: '获客成本(CAC)/用户生命周期价值(LTV)', desc: '用户获取效率', threshold: 'LTV/CAC≥3为健康' },
+      { key: 'gross_margin', name: '毛利率', desc: '软件/SaaS毛利率通常≥70%', threshold: '≥70%为优秀，50-70%为良好' },
+      { key: 'nrr', name: '净收入留存率（NRR）', desc: 'SaaS核心指标，>100%表示老客户增购', threshold: '≥120%为优秀，100-120%为良好，<100%流失严重' },
+    ],
+    prompt: `## 互联网/软件行业特色指标分析
+
+请重点分析以下行业关键指标：
+
+1. **MAU/DAU**：
+   - 月活跃用户/日活跃用户数及增速
+   - DAU/MAU比值（≥40%为高粘性）
+   - 用户时长和频次
+
+2. **ARPU（单用户收入）**：
+   - ARPU = 总收入/平均用户数
+   - ARPU同比增速
+   - 付费用户转化率
+
+3. **获客效率（CAC/LTV）**：
+   - 获客成本（CAC）= 营销费用/新增用户
+   - 用户生命周期价值（LTV）= ARPU × 平均留存月数 × 毛利率
+   - LTV/CAC≥3为健康商业模式
+
+4. **毛利率**：
+   - 软件/SaaS毛利率通常≥70%
+   - 云服务/平台型毛利率50-70%
+   - 电商/内容型毛利率较低（20-40%）
+
+5. **净收入留存率（NRR）**（SaaS）：
+   - =（期初收入+增购-流失）/期初收入
+   - ≥120%为优秀（老客户年增购20%+）
+   - 100-120%为良好，<100%流失严重`
+  },
+};
+
+/**
+ * 根据行业名称匹配行业配置
+ */
+function matchIndustryConfig(industry) {
+  if (!industry) return null;
+  
+  for (const [key, config] of Object.entries(INDUSTRY_KEY_METRICS)) {
+    if (industry.includes(key)) {
+      return config;
+    }
+  }
+  return null;
+}
+
 const STOCK_ANALYSIS_SYSTEM_PROMPT = `你是一位专业的投资分析师，严格按照"投资公司分析框架"对股票进行全方位深度分析。
 
-## 分析框架（必须按以下6大维度逐项分析）
+## 行业特色指标分析要求
+
+**重要**：如果用户提供的数据中包含"行业特色指标分析"部分，请将其融入整体分析中，作为行业深度洞察的重要参考。不同行业有不同的核心驱动因素和关键指标：
+
+- **半导体行业**：重点关注BB值（订单出货比）、研发投入占比、毛利率、存货周转、产能利用率
+- **新能源行业**：重点关注产能利用率、单位成本、转换效率、出货量增速、补贴依赖度
+- **医药生物**：重点关注研发管线价值、专利悬崖风险、集采影响、创新药占比
+- **消费行业**：重点关注同店增长、渠道库存、品牌溢价、复购率、区域扩张
+- **金融行业**：重点关注净息差、不良贷款率、拨备覆盖率、资本充足率、内含价值增速
+- **互联网/软件**：重点关注MAU/DAU、ARPU、获客效率、毛利率、净收入留存率(NRR)
+
+请在分析中结合行业特点，对这些特色指标进行专业解读。
+
+## 分析框架（必须按以下7大维度逐项分析）
 
 ### 1. 行业与商业模式 (Business Model & Industry)
 - **行业天花板**：市场空间有多大？是处于成长期、成熟期还是衰退期？
@@ -455,18 +729,33 @@ const STOCK_ANALYSIS_SYSTEM_PROMPT = `你是一位专业的投资分析师，严
 - **资本配置**：分红/回购/再投资的质量
 - **企业文化**：价值观与人才吸引力
 
-### 4. 估值分析 (Valuation)
+### 4. 大股东/机构持股变化分析 (Shareholder Structure & Institutional Holdings)
+- **股东户数变化**：
+  - 股东户数增减趋势（减少=筹码集中，增加=筹码分散）
+  - 户均持股变化（增加=机构收集筹码，减少=机构派发筹码）
+  - 筹码集中度判断（高度集中/集中/分散/高度分散）
+- **十大流通股东分析**：
+  - 机构持股比例和变化趋势
+  - 知名机构/基金进出情况（社保、QFII、公募、私募、险资等）
+  - 增减持动向统计（增持家数 vs 减持家数）
+  - 大股东/实控人持股变化
+- **机构态度解读**：
+  - 机构整体看好/看空/观望
+  - 聪明钱（Smart Money）流向分析
+  - 机构成本区估算（如数据可得）
+
+### 5. 估值分析 (Valuation)
 - **绝对估值 (DCF)**：自由现金流折现模型，计算内在价值
 - **相对估值**：PE/PS/PB 与行业和历史对比
 - **安全边际**：当前股价是否比内在价值至少便宜20%-30%？
 
-### 5. 核心风险 (Key Risks)
+### 6. 核心风险 (Key Risks)
 - **政策风险**：监管环境变化
 - **技术替代**：颠覆性技术威胁
 - **宏观风险**：汇率、利率、通胀影响
 - **关键人风险**：灵魂人物离开后影响
 
-### 6. 预期与触发点 (Catalysts)
+### 7. 预期与触发点 (Catalysts)
 - **市场预期**：当前股价反映了多少好消息？
 - **触发因素**：未来6-12个月驱动股价上涨的事件
 
@@ -484,19 +773,25 @@ const STOCK_ANALYSIS_SYSTEM_PROMPT = `你是一位专业的投资分析师，严
 ### 👔 四、管理层质量评价
 4个维度逐一评分（优/良/中/差）+ 综合评价。
 
-### 📐 五、估值分析
+### 🏢 五、大股东/机构持股变化分析
+- **股东户数变化分析**：最新数据、环比变化、筹码集中度判断
+- **十大流通股东列表**：表格展示股东名称、持股数、占比、变动、股东类型
+- **机构持股特征**：机构数量、增减持统计、聪明钱流向
+- **综合评价**：机构整体态度（强烈看好/看好/中性/谨慎/看空）+ 筹码集中度评级
+
+### 📐 六、估值分析
 - DCF估值区间
 - PE/PB/PS 与同业对比
 - 安全边际计算
 - 估值结论：严重低估 / 低估 / 合理 / 高估 / 严重高估
 
-### ⚠️ 六、核心风险提示
+### ⚠️ 七、核心风险提示
 按4个维度列举，标注风险等级（高/中/低）。
 
-### 🚀 七、预期与催化剂
+### 🚀 八、预期与催化剂
 市场预期分析 + 未来6-12个月催化剂列表。
 
-### 🎯 八、投资策略建议
+### 🎯 九、投资策略建议
 结合当前股价，给出明确的投资策略：
 - **建议操作**：强烈买入 / 买入 / 持有 / 观望 / 回避
 - **目标价位**：给出合理价格区间
@@ -593,10 +888,304 @@ const state = {
   companyFilter: 'all',      // 当前关注公司过滤
   companyTypeFilter: 'news',  // news | announcement
   companyTimer: null,         // 公司资讯自动刷新定时器
+  companySentimentFilter: 'all',  // all | positive | negative | neutral 情感过滤
+  companySentimentCache: {},  // {itemId: 'positive'|'negative'|'neutral'} 情感分析缓存
 };
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+
+// ======================== 数据持久化管理 ========================
+
+/**
+ * 当前数据存储版本号
+ * 用于跨版本数据迁移和兼容性管理
+ */
+const STORAGE_VERSION = '2.11.1';
+
+/**
+ * 增强的数据持久化管理器
+ * 支持版本管理、自动迁移、双重备份
+ */
+const StorageManager = {
+  /**
+   * 保存设置到持久化存储
+   * @param {Object} data - 要保存的数据
+   */
+  saveSettings(data) {
+    try {
+      // 添加版本号和保存时间戳
+      const dataWithMeta = {
+        ...data,
+        _version: STORAGE_VERSION,
+        _lastSaved: new Date().toISOString(),
+        _migrated: data._version !== STORAGE_VERSION
+      };
+      
+      // 1. 保存到 localStorage（主存储）
+      localStorage.setItem('er_settings', JSON.stringify(dataWithMeta));
+      
+      // 2. 同步到 chrome.storage.local（备份，扩展更新后保留）
+      if (chrome && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ 'er_settings_backup': dataWithMeta }, (error) => {
+          if (error) {
+            console.warn('chrome.storage备份失败:', error);
+          }
+        });
+      }
+      
+      return true;
+    } catch (e) {
+      console.error('保存设置失败:', e);
+      return false;
+    }
+  },
+  
+  /**
+   * 从持久化存储加载设置
+   * @returns {Object|null} 加载的设置数据
+   */
+  loadSettings() {
+    try {
+      // 1. 优先从 localStorage 加载
+      let saved = localStorage.getItem('er_settings');
+      let dataSource = 'localStorage';
+      
+      // 2. 如果 localStorage 没有数据，尝试从 chrome.storage 恢复
+      if (!saved && chrome && chrome.storage && chrome.storage.local) {
+        return new Promise((resolve) => {
+          chrome.storage.local.get(['er_settings_backup'], (result) => {
+            if (result.er_settings_backup) {
+              console.log('从chrome.storage备份恢复数据');
+              localStorage.setItem('er_settings', JSON.stringify(result.er_settings_backup));
+              resolve(result.er_settings_backup);
+            } else {
+              resolve(null);
+            }
+          });
+        });
+      }
+      
+      if (!saved) return null;
+      
+      const parsed = JSON.parse(saved);
+      
+      // 3. 数据完整性校验
+      if (!parsed.services || !Array.isArray(parsed.services)) {
+        console.warn('数据完整性校验失败，尝试修复');
+        return this.migrateLegacyData(parsed);
+      }
+      
+      // 4. 版本检查和迁移
+      if (parsed._version !== STORAGE_VERSION) {
+        console.log(`数据版本 ${parsed._version || '未知'} -> ${STORAGE_VERSION}，执行迁移`);
+        return this.migrateData(parsed);
+      }
+      
+      return parsed;
+    } catch (e) {
+      console.error('加载设置失败:', e);
+      return null;
+    }
+  },
+  
+  /**
+   * 数据迁移函数
+   * 处理不同版本之间的数据结构变化
+   * @param {Object} oldData - 旧版本数据
+   * @returns {Object} 迁移后的数据
+   */
+  migrateData(oldData) {
+    const migrated = { ...oldData };
+    
+    // v2.11.0 迁移：添加 services 数组支持
+    if (!migrated.services || migrated.services.length === 0) {
+      migrated.services = [{
+        id: 'default',
+        name: migrated.provider === 'openai' ? 'OpenAI' : 
+              migrated.provider === 'deepseek' ? 'DeepSeek' :
+              migrated.provider === 'zhipu' ? '智谱' :
+              migrated.provider === 'qwen' ? '通义千问' : '自定义API',
+        provider: migrated.provider || 'deepseek',
+        baseUrl: migrated.baseUrl || '',
+        apiKey: migrated.apiKey || '',
+        model: migrated.model || '',
+        enabled: true
+      }];
+      migrated.activeServiceId = 'default';
+    }
+    
+    // 更新版本号
+    migrated._version = STORAGE_VERSION;
+    migrated._lastMigrated = new Date().toISOString();
+    migrated._migrated = true;
+    
+    // 保存迁移后的数据
+    this.saveSettings(migrated);
+    
+    console.log('数据迁移完成');
+    return migrated;
+  },
+  
+  /**
+   * 迁移遗留数据（无版本号的老数据）
+   * @param {Object} legacyData - 遗留数据
+   * @returns {Object} 迁移后的数据
+   */
+  migrateLegacyData(legacyData) {
+    const migrated = this.migrateData(legacyData);
+    return migrated;
+  },
+  
+  /**
+   * 清除所有存储的设置
+   */
+  clearSettings() {
+    localStorage.removeItem('er_settings');
+    if (chrome && chrome.storage && chrome.storage.local) {
+      chrome.storage.local.remove('er_settings_backup');
+    }
+  },
+  
+  /**
+   * 导出设置数据（用于备份）
+   * @returns {String} JSON格式的设置数据
+   */
+  exportSettings() {
+    const saved = localStorage.getItem('er_settings');
+    if (!saved) return null;
+    
+    const data = JSON.parse(saved);
+    // 移除内部元数据
+    delete data._version;
+    delete data._lastSaved;
+    delete data._lastMigrated;
+    delete data._migrated;
+    
+    // 添加关注公司列表
+    const watchlistSaved = localStorage.getItem('er_watchlist');
+    if (watchlistSaved) {
+      try {
+        const watchlistData = JSON.parse(watchlistSaved);
+        data._watchlist = watchlistData.items || watchlistData; // 兼容旧格式
+      } catch (e) {
+        console.warn('读取关注列表失败:', e);
+      }
+    }
+    
+    return JSON.stringify(data, null, 2);
+  },
+  
+  /**
+   * 导入设置数据（用于恢复）
+   * @param {String} jsonData - JSON格式的设置数据
+   * @returns {Boolean} 是否导入成功
+   */
+  importSettings(jsonData) {
+    try {
+      const data = JSON.parse(jsonData);
+      
+      // 数据验证
+      if (!data.services || !Array.isArray(data.services)) {
+        throw new Error('数据格式无效');
+      }
+      
+      // 提取关注公司列表（如果存在）
+      let watchlist = null;
+      if (data._watchlist && Array.isArray(data._watchlist)) {
+        watchlist = data._watchlist;
+        delete data._watchlist; // 从配置中移除，单独保存
+      }
+      
+      // 添加元数据
+      data._version = STORAGE_VERSION;
+      data._lastSaved = new Date().toISOString();
+      data._migrated = false;
+      
+      // 保存配置
+      localStorage.setItem('er_settings', JSON.stringify(data));
+      
+      // 同步到 chrome.storage
+      if (chrome && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ 'er_settings_backup': data });
+      }
+      
+      // 恢复关注公司列表
+      if (watchlist && watchlist.length > 0) {
+        const watchlistData = {
+          version: STORAGE_VERSION,
+          lastSaved: new Date().toISOString(),
+          items: watchlist
+        };
+        localStorage.setItem('er_watchlist', JSON.stringify(watchlistData));
+        
+        // 同步到 chrome.storage
+        if (chrome && chrome.storage && chrome.storage.local) {
+          chrome.storage.local.set({ 'er_watchlist_backup': watchlistData });
+        }
+        
+        // 更新state
+        state.watchlist = watchlist;
+      }
+      
+      return true;
+    } catch (e) {
+      console.error('导入设置失败:', e);
+      return false;
+    }
+  }
+};
+
+/**
+ * 关注列表持久化管理器
+ */
+const WatchlistStorage = {
+  save(watchlist) {
+    try {
+      const data = {
+        version: STORAGE_VERSION,
+        lastSaved: new Date().toISOString(),
+        items: watchlist
+      };
+      localStorage.setItem('er_watchlist', JSON.stringify(data));
+      
+      // 备份到 chrome.storage
+      if (chrome && chrome.storage && chrome.storage.local) {
+        chrome.storage.local.set({ 'er_watchlist_backup': data });
+      }
+    } catch (e) {
+      console.error('保存关注列表失败:', e);
+    }
+  },
+  
+  load() {
+    try {
+      let saved = localStorage.getItem('er_watchlist');
+      
+      // 从备份恢复
+      if (!saved && chrome && chrome.storage && chrome.storage.local) {
+        return new Promise((resolve) => {
+          chrome.storage.local.get(['er_watchlist_backup'], (result) => {
+            if (result.er_watchlist_backup) {
+              localStorage.setItem('er_watchlist', JSON.stringify(result.er_watchlist_backup));
+              resolve(result.er_watchlist_backup.items || []);
+            } else {
+              resolve([]);
+            }
+          });
+        });
+      }
+      
+      if (!saved) return [];
+      
+      const parsed = JSON.parse(saved);
+      return parsed.items || parsed; // 兼容旧格式
+    } catch (e) {
+      console.error('加载关注列表失败:', e);
+      return [];
+    }
+  }
+};
 
 // ======================== 初始化 ========================
 
@@ -619,30 +1208,22 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function loadSettings() {
-  const saved = localStorage.getItem('er_settings');
-  if (saved) {
-    try {
-      const savedSettings = JSON.parse(saved);
-      // 兼容旧格式：如果没有services数组，则从旧字段创建
-      if (!savedSettings.services || savedSettings.services.length === 0) {
-        savedSettings.services = [{
-          id: 'default',
-          name: savedSettings.provider === 'openai' ? 'OpenAI' : 
-                savedSettings.provider === 'deepseek' ? 'DeepSeek' :
-                savedSettings.provider === 'zhipu' ? '智谱' :
-                savedSettings.provider === 'qwen' ? '通义千问' : '自定义API',
-          provider: savedSettings.provider || 'deepseek',
-          baseUrl: savedSettings.baseUrl || '',
-          apiKey: savedSettings.apiKey || '',
-          model: savedSettings.model || '',
-          enabled: true
-        }];
-        savedSettings.activeServiceId = 'default';
+  const result = StorageManager.loadSettings();
+  
+  // 处理Promise情况（从chrome.storage恢复）
+  if (result && typeof result.then === 'function') {
+    result.then((savedSettings) => {
+      if (savedSettings) {
+        Object.assign(state.settings, savedSettings);
+        loadActiveService();
+        renderLLMServicesList();
       }
-      Object.assign(state.settings, savedSettings);
-    } catch (e) {
-      console.error('加载设置失败:', e);
-    }
+    });
+    return;
+  }
+  
+  if (result) {
+    Object.assign(state.settings, result);
   }
   
   // 加载当前激活的服务
@@ -658,6 +1239,12 @@ function loadActiveService() {
     $('#llm-api-key').value = activeService.apiKey;
     $('#llm-model').value = activeService.model;
     $('#llm-active-service').value = activeService.id;
+    
+    // 同步更新顶层字段（向后兼容）
+    state.settings.provider = activeService.provider;
+    state.settings.baseUrl = activeService.baseUrl;
+    state.settings.apiKey = activeService.apiKey;
+    state.settings.model = activeService.model;
   }
 }
 
@@ -667,24 +1254,33 @@ function saveSettings() {
   const serviceIndex = state.settings.services.findIndex(s => s.id === currentServiceId);
   
   if (serviceIndex >= 0) {
-    state.settings.services[serviceIndex] = {
+    const updatedService = {
       ...state.settings.services[serviceIndex],
       provider: $('#llm-provider').value,
       baseUrl: $('#llm-base-url').value,
       apiKey: $('#llm-api-key').value,
       model: $('#llm-model').value
     };
+    state.settings.services[serviceIndex] = updatedService;
+    
+    // 同步更新顶层字段（向后兼容）
+    state.settings.provider = updatedService.provider;
+    state.settings.baseUrl = updatedService.baseUrl;
+    state.settings.apiKey = updatedService.apiKey;
+    state.settings.model = updatedService.model;
   }
   
   state.settings.activeServiceId = currentServiceId;
   
-  localStorage.setItem('er_settings', JSON.stringify(state.settings));
+  // 使用StorageManager保存（自动版本管理和备份）
+  const success = StorageManager.saveSettings(state.settings);
+  
   const s = $('#settings-status');
-  if (!state.settings.services[serviceIndex]?.apiKey) {
+  if (!success || !state.settings.services[serviceIndex]?.apiKey) {
     s.textContent = '⚠️ 请填写 API Key';
     s.className = 'settings-status error';
   } else {
-    s.textContent = '✅ 设置已保存';
+    s.textContent = '✅ 设置已保存（已备份）';
     s.className = 'settings-status success';
   }
   setTimeout(() => { s.textContent = ''; }, 3000);
@@ -695,6 +1291,9 @@ function saveSettings() {
 // ======================== 事件绑定 ========================
 
 function bindEvents() {
+  // 页面加载时自动清理过期情感缓存
+  cleanExpiredSentimentCache();
+  
   // 标签切换
   $$('.tab').forEach(tab => {
     tab.addEventListener('click', () => switchTab(tab.dataset.tab));
@@ -721,6 +1320,84 @@ function bindEvents() {
   $('#llm-active-service').addEventListener('change', (e) => {
     switchLLMService(e.target.value);
   });
+  
+  // 数据管理事件
+  $('#btn-export-settings')?.addEventListener('click', () => exportSettings());
+  $('#btn-import-settings')?.addEventListener('click', () => {
+    $('#import-file-input').click();
+  });
+  $('#import-file-input')?.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) {
+      importSettings(e.target.files[0]);
+      e.target.value = ''; // 重置以便下次使用
+    }
+  });
+  $('#btn-clear-settings')?.addEventListener('click', () => clearAllSettings());
+  
+  // 情感缓存管理事件
+  $('#btn-clean-sentiment-cache')?.addEventListener('click', () => {
+    const cleaned = cleanExpiredSentimentCache();
+    updateSentimentCacheStats();
+    showToast(`✅ 已清理 ${cleaned} 条过期缓存`);
+  });
+  $('#btn-clear-sentiment-cache')?.addEventListener('click', () => {
+    if (confirm('确定要清空所有情感缓存吗？下次刷新资讯时将重新分析。')) {
+      clearSentimentCache();
+      updateSentimentCacheStats();
+    }
+  });
+  
+  // 更新情感缓存统计
+  function updateSentimentCacheStats() {
+    const statsEl = $('#sentiment-cache-stats');
+    if (!statsEl) return;
+    
+    const stats = getSentimentCacheStats();
+    
+    if (stats.total === 0) {
+      statsEl.innerHTML = `
+        <div class="cache-stat-item">
+          <span class="cache-stat-label">暂无缓存数据</span>
+        </div>
+      `;
+      return;
+    }
+    
+    const sizeKB = (stats.size / 1024).toFixed(2);
+    statsEl.innerHTML = `
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">总缓存数</span>
+        <span class="cache-stat-value">${stats.total} 条</span>
+      </div>
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">有效缓存</span>
+        <span class="cache-stat-value">${stats.valid} 条</span>
+      </div>
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">已过期</span>
+        <span class="cache-stat-value">${stats.expired} 条</span>
+      </div>
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">🔴 利好</span>
+        <span class="cache-stat-value positive">${stats.positive} 条</span>
+      </div>
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">🟢 利空</span>
+        <span class="cache-stat-value negative">${stats.negative} 条</span>
+      </div>
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">⚪ 中性</span>
+        <span class="cache-stat-value neutral">${stats.neutral} 条</span>
+      </div>
+      <div class="cache-stat-item">
+        <span class="cache-stat-label">占用空间</span>
+        <span class="cache-stat-value">${sizeKB} KB</span>
+      </div>
+    `;
+  }
+  
+  // 初始加载缓存统计
+  updateSentimentCacheStats();
   
   // 旧的保存按钮（保留兼容性）
   $('#btn-save-settings')?.addEventListener('click', saveSettings);
@@ -1015,15 +1692,85 @@ function bindEvents() {
     }
   });
 
+  // 股票信息卡子Tab切换
+  $$('.sa-info-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const parentCard = tab.closest('.sa-stock-card, .sa-stock-card-collapsed');
+      if (!parentCard) return;
+      parentCard.querySelectorAll('.sa-info-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      parentCard.querySelectorAll('.sa-info-sub-panel').forEach(p => p.classList.remove('active'));
+      const targetPanel = parentCard.querySelector(`#sa-info-${tab.dataset.infotab}-panel, #sa-collapse-${tab.dataset.infotab}`);
+      if (targetPanel) targetPanel.classList.add('active');
+      // 切到K线时加载
+      if (tab.dataset.infotab === 'kline' && state.saStock) {
+        loadKlineChart(tab.closest('.sa-stock-card') ? 'main' : 'collapsed');
+      }
+    });
+  });
+
+  // 折叠面板展开/收起
+  $('#sa-collapse-toggle')?.addEventListener('click', () => {
+    const body = $('#sa-collapse-body');
+    const arrow = $('#sa-collapse-arrow');
+    if (body.style.display === 'none') {
+      body.style.display = '';
+      arrow.classList.add('expanded');
+    } else {
+      body.style.display = 'none';
+      arrow.classList.remove('expanded');
+    }
+  });
+
+  // K线周期切换
+  $('#sa-kline-period')?.addEventListener('change', () => {
+    if (state.saStock) loadKlineChart('main');
+  });
+  $('#sa-collapse-kline-period')?.addEventListener('change', () => {
+    if (state.saStock) loadKlineChart('collapsed');
+  });
+
   $('#btn-sa-start').addEventListener('click', runStockAnalysis);
   $('#btn-sa-regenerate').addEventListener('click', () => {
     if (state.saStock && state.saFundamentals) {
       runStockAnalysis();
     } else {
       $('#sa-result').style.display = 'none';
+      $('#sa-stock-card-collapsed').style.display = 'none';
       $('.sa-container').style.display = '';
     }
   });
+  
+  // 切换股票（两个按钮：头部图标+底部按钮）
+  const switchStockAction = () => {
+    // 重置状态
+    state.saStock = null;
+    state.saFundamentals = null;
+    state.saMarkdown = '';
+    state.isSARunning = false;
+    state.companySentimentCache = {}; // 清空情感缓存
+    
+    // 隐藏结果和loading
+    $('#sa-result').style.display = 'none';
+    $('#sa-loading').style.display = 'none';
+    $('#sa-stock-card-collapsed').style.display = 'none';
+    
+    // 显示搜索区
+    $('.sa-container').style.display = '';
+    $('#sa-stock-card').style.display = 'none';
+    
+    // 清空搜索框并聚焦
+    const searchInput = $('#sa-search-input');
+    if (searchInput) {
+      searchInput.value = '';
+      searchInput.focus();
+    }
+    
+    showToast('🔍 请输入新的股票代码');
+  };
+  
+  $('#btn-sa-switch-stock')?.addEventListener('click', switchStockAction);
+  $('#btn-sa-switch-stock-footer')?.addEventListener('click', switchStockAction);
   $('#btn-sa-copy').addEventListener('click', () => {
     navigator.clipboard.writeText(state.saMarkdown)
       .then(() => showToast('📋 分析报告已复制'))
@@ -1089,6 +1836,7 @@ function showSettings() {
   // 刷新设置面板中的数据
   refreshSettingsWatchlist();
   renderLLMServicesList();
+  showStorageInfo(); // 显示存储信息
   // 默认显示大模型配置tab
   $$('.settings-sub-tab').forEach(t => t.classList.remove('active'));
   $$('.settings-sub-panel').forEach(p => p.classList.remove('active'));
@@ -1999,8 +2747,30 @@ function bindHotspotEvents() {
       $$('.hs-type-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       state.companyTypeFilter = tab.dataset.type;
+      // 切换到公告时隐藏情感筛选
+      if (tab.dataset.type === 'announcement') {
+        const sentimentTabs = $$('.hs-sentiment-tab');
+        if (sentimentTabs.length > 0) {
+          sentimentTabs.forEach(t => t.style.display = 'none');
+        }
+      } else {
+        const sentimentTabs = $$('.hs-sentiment-tab');
+        if (sentimentTabs.length > 0) {
+          sentimentTabs.forEach(t => t.style.display = '');
+        }
+      }
       renderCompanyList();
     });
+  });
+  
+  // 情感筛选标签
+  $('#hs-sentiment-chips')?.addEventListener('click', (e) => {
+    const chip = e.target.closest('.hs-sentiment-tab');
+    if (!chip) return;
+    $$('.hs-sentiment-tab').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    state.companySentimentFilter = chip.dataset.sentiment;
+    renderCompanyList();
   });
 
   // 公司列表点击事件委托
@@ -2024,10 +2794,18 @@ function bindHotspotEvents() {
  * 加载关注列表
  */
 function loadWatchlist() {
-  const saved = localStorage.getItem('er_watchlist');
-  if (saved) {
-    try { state.watchlist = JSON.parse(saved); } catch (e) { state.watchlist = []; }
+  const result = WatchlistStorage.load();
+  
+  // 处理Promise情况
+  if (result && typeof result.then === 'function') {
+    result.then((watchlist) => {
+      state.watchlist = watchlist;
+      renderCompanyChips();
+    });
+    return;
   }
+  
+  state.watchlist = result;
   renderCompanyChips();
 }
 
@@ -2035,7 +2813,7 @@ function loadWatchlist() {
  * 保存关注列表
  */
 function saveWatchlist() {
-  localStorage.setItem('er_watchlist', JSON.stringify(state.watchlist));
+  WatchlistStorage.save(state.watchlist);
   renderCompanyChips();
 }
 
@@ -2275,6 +3053,15 @@ async function fetchCompanyData() {
 
   renderCompanyList();
   updateCompanyUpdateTime();
+  
+  // 后台异步进行情感分析（不阻塞渲染）
+  if (state.settings.apiKey && state.companyItems.length > 0) {
+    console.log(`[情感分析] 开始分析${state.companyItems.length}条资讯...`);
+    batchAnalyzeSentiment(state.companyItems.slice(0, 50)).then(() => {
+      console.log('[情感分析] 分析完成，重新渲染列表');
+      renderCompanyList(); // 分析完成后重新渲染显示标签
+    });
+  }
 }
 
 /**
@@ -2479,6 +3266,138 @@ async function fetchCompanyAnnouncements(watchItem) {
 }
 
 /**
+ * AI情感分析：判断资讯对股票的影响（利好/利空/中性）
+ */
+async function analyzeNewsSentiment(item) {
+  const cacheKey = item.id;
+  
+  // 1. 检查内存缓存
+  if (state.companySentimentCache[cacheKey]) {
+    return state.companySentimentCache[cacheKey];
+  }
+  
+  // 2. 检查持久化缓存（localStorage）
+  try {
+    const persistentCache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
+    if (persistentCache[cacheKey]) {
+      const cached = persistentCache[cacheKey];
+      // 检查缓存是否过期（24小时）
+      const cacheAge = Date.now() - cached.timestamp;
+      const CACHE_TTL = 24 * 60 * 60 * 1000; // 24小时
+      
+      if (cacheAge < CACHE_TTL) {
+        // 缓存未过期，使用缓存
+        state.companySentimentCache[cacheKey] = cached.sentiment;
+        return cached.sentiment;
+      } else {
+        // 缓存已过期，删除
+        delete persistentCache[cacheKey];
+        localStorage.setItem('er_sentiment_cache', JSON.stringify(persistentCache));
+      }
+    }
+  } catch (e) {
+    console.warn('读取情感缓存失败:', e);
+  }
+  
+  // 3. 如果没有配置API Key，返回中性
+  if (!state.settings.apiKey) {
+    state.companySentimentCache[cacheKey] = 'neutral';
+    return 'neutral';
+  }
+  
+  try {
+    // 优化prompt，减少token消耗
+    const prompt = `判断资讯对${item.companyName}股票的影响（利好/利空/中性），只回答一个词：
+标题：${item.title}
+摘要：${item.summary || item.title}`;
+
+    const response = await fetch(`${state.settings.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.settings.apiKey}`
+      },
+      body: JSON.stringify({
+        model: state.settings.model,
+        messages: [
+          { role: 'system', content: '你是投资分析师，判断资讯对股票影响。只回答：利好/利空/中性' },
+          { role: 'user', content: prompt }
+        ],
+        max_tokens: 4,  // 进一步减少，只需一个词
+        temperature: 0.1  // 略微提高，避免过于死板
+      })
+    });
+
+    if (!response.ok) {
+      console.warn('情感分析API调用失败:', response.status);
+      state.companySentimentCache[cacheKey] = 'neutral';
+      return 'neutral';
+    }
+
+    const data = await response.json();
+    const result = data.choices?.[0]?.message?.content?.trim() || '中性';
+    
+    // 转换为英文标识
+    let sentiment = 'neutral';
+    if (result.includes('利好') || result.includes('positive')) {
+      sentiment = 'positive';
+    } else if (result.includes('利空') || result.includes('negative')) {
+      sentiment = 'negative';
+    }
+    
+    // 4. 写入内存缓存
+    state.companySentimentCache[cacheKey] = sentiment;
+    
+    // 5. 写入持久化缓存
+    try {
+      const persistentCache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
+      persistentCache[cacheKey] = {
+        sentiment: sentiment,
+        timestamp: Date.now(),
+        title: item.title.substring(0, 50)  // 保存标题前50字用于调试
+      };
+      
+      // 清理过期缓存（保留最近100条）
+      const keys = Object.keys(persistentCache).sort((a, b) => {
+        return (persistentCache[b].timestamp || 0) - (persistentCache[a].timestamp || 0);
+      });
+      
+      if (keys.length > 100) {
+        keys.slice(100).forEach(key => delete persistentCache[key]);
+      }
+      
+      localStorage.setItem('er_sentiment_cache', JSON.stringify(persistentCache));
+    } catch (e) {
+      console.warn('保存情感缓存失败:', e);
+    }
+    
+    return sentiment;
+  } catch (e) {
+    console.error('情感分析失败:', e);
+    state.companySentimentCache[cacheKey] = 'neutral';
+    return 'neutral';
+  }
+}
+
+/**
+ * 批量分析资讯情感（带并发控制）
+ */
+async function batchAnalyzeSentiment(items) {
+  const concurrency = 3; // 最多同时3个请求
+  let index = 0;
+  
+  async function processNext() {
+    if (index >= items.length) return;
+    const item = items[index++];
+    await analyzeNewsSentiment(item);
+    await processNext();
+  }
+  
+  const workers = Array(Math.min(concurrency, items.length)).fill(null).map(() => processNext());
+  await Promise.all(workers);
+}
+
+/**
  * 渲染公司资讯/公告列表
  */
 function renderCompanyList() {
@@ -2492,12 +3411,25 @@ function renderCompanyList() {
   if (state.companyFilter !== 'all') {
     items = items.filter(item => item.companyCode === state.companyFilter || item.companyName === state.companyFilter);
   }
+  
+  // 情感过滤（仅对资讯生效，公告不过滤）
+  if (isNews && state.companySentimentFilter !== 'all') {
+    items = items.filter(item => {
+      const sentiment = state.companySentimentCache[item.id] || 'neutral';
+      return sentiment === state.companySentimentFilter;
+    });
+  }
 
   if (items.length === 0) {
+    const emptyMsg = state.companySentimentFilter !== 'all' 
+      ? `📭 暂无${state.companySentimentFilter === 'positive' ? '利好' : state.companySentimentFilter === 'negative' ? '利空' : '中性'}资讯`
+      : state.watchlist.length === 0 
+        ? '⭐ 点击 ⭐ 添加关注公司' 
+        : '📭 暂无匹配的公司资讯';
     container.innerHTML = `
       <div class="hs-empty">
-        <p>${state.watchlist.length === 0 ? '⭐ 点击 ⭐ 添加关注公司' : '📭 暂无匹配的公司资讯'}</p>
-        <p class="hs-empty-hint">获取关注公司的热点资讯与公告信息</p>
+        <p>${emptyMsg}</p>
+        <p class="hs-empty-hint">${isNews ? '获取关注公司的热点资讯与公告信息' : '查看关注公司的公告信息'}</p>
       </div>`;
     return;
   }
@@ -2514,6 +3446,21 @@ function renderCompanyList() {
     const sourcesHtml = sources.map(s =>
       `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
     ).join(' ');
+    
+    // 情感标签（仅资讯显示）
+    let sentimentBadge = '';
+    if (isNews) {
+      const sentiment = state.companySentimentCache[item.id];
+      if (sentiment === 'positive') {
+        sentimentBadge = '<span class="hs-sentiment-badge positive">🔴 利好</span>';
+      } else if (sentiment === 'negative') {
+        sentimentBadge = '<span class="hs-sentiment-badge negative">🟢 利空</span>';
+      } else if (sentiment === 'neutral') {
+        sentimentBadge = '<span class="hs-sentiment-badge neutral">⚪ 中性</span>';
+      } else {
+        sentimentBadge = '<span class="hs-sentiment-badge analyzing">⏳ 分析中...</span>';
+      }
+    }
 
     // 公告类型标签
     const tagsHtml = (item.tags || []).map(t =>
@@ -2526,6 +3473,7 @@ function renderCompanyList() {
           <div class="hs-item-source">
             ${companyBadge}
             ${sourcesHtml}
+            ${sentimentBadge}
             <span class="hs-item-time">${item.timeStr}</span>
           </div>
         </div>
@@ -2624,15 +3572,11 @@ ${input}
 3. 如果输入的是条件描述，请推荐符合条件的股票
 4. 严格按照策略模板输出`;
 
-    const result = await callLLM(strategy.prompt, userPrompt, true);
+    const result = await callLLM(strategy.prompt, userPrompt, true, 'screener');
 
     if (result) {
       state.screenerMarkdown = result;
-      const container = $('#screener-content');
-      container.innerHTML = renderMarkdown(result);
-      addSectionIdsAndPlayButtons(container);
-      buildTTSSectionsFrom(container);
-
+      // 流式渲染已经在callLLM中处理，这里只需要隐藏loading
       $('#screener-loading').style.display = 'none';
       $('#screener-result').style.display = '';
       showToast('✅ 选股分析完成');
@@ -3478,6 +4422,8 @@ async function callLLM(systemPrompt, userMessage, stream = false, streamTarget =
   if (stream) {
     const onChunk = streamTarget === 'stock-analysis'
       ? (text) => { state.saMarkdown = text; renderSAReportStreaming(text); }
+      : streamTarget === 'screener'
+      ? (text) => { state.screenerMarkdown = text; renderScreenerReportStreaming(text); }
       : (text) => { state.reportMarkdown = text; renderReportStreaming(text); };
     return await handleStreamResponse(response, onChunk);
   } else {
@@ -5237,6 +6183,120 @@ async function fetchSAFundamentals(tsCode, secid) {
     state.saFundamentals._incomePrev = incomeDataPrev;
     state.saFundamentals._finMainPrev = finMainDataPrev;
 
+    // 5. 机构持股数据（最近两期对比）
+    try {
+      const holderUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=END_DATE&sortTypes=-1&pageSize=2&pageNumber=1&reportName=RPT_F10_EH_FREEHOLDERS&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
+      const holderResp = await fetch(holderUrl);
+      const holderResult = await holderResp.json();
+      if (holderResult?.result?.data?.length) {
+        state.saFundamentals._holderData = holderResult.result.data[0];
+        state.saFundamentals._holderDataPrev = holderResult.result.data[1] || null;
+      }
+    } catch (e) { console.log('机构持股接口失败:', e); }
+
+    // 6. 十大流通股东变化
+    try {
+      const topHolderUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=END_DATE&sortTypes=-1&pageSize=10&pageNumber=1&reportName=RPT_F10_EH_FREEHOLDERS&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
+      const topHolderResp = await fetch(topHolderUrl);
+      const topHolderResult = await topHolderResp.json();
+      if (topHolderResult?.result?.data?.length) {
+        state.saFundamentals._topHolders = topHolderResult.result.data;
+      }
+    } catch (e) { console.log('十大流通股东接口失败:', e); }
+
+    // 7. 获取行业特色指标数据
+    try {
+      const industry = finMainData?.INDUSTRY_NAME || '';
+      const industryConfig = matchIndustryConfig(industry);
+      if (industryConfig) {
+        console.log(`[行业指标] 识别到行业: ${industryConfig.name}`);
+        
+        // 计算行业特色指标
+        const industryMetrics = {};
+        
+        // 研发投入占比
+        if (incomeData && finMainData) {
+          const rAndD = incomeData.RESEARCH_DEVELOPE_INCOME || 0;
+          const revenue = incomeData.TOTAL_OPERATE_INCOME || finMainData.TOTALOPERATEREVENUE || 1;
+          if (rAndD > 0 && revenue > 0) {
+            const rdRatio = (rAndD / revenue * 100);
+            industryMetrics.r_and_d_ratio = `${rdRatio.toFixed(2)}%`;
+            industryMetrics.r_and_d_amount = (rAndD / 100000000).toFixed(2) + '亿元';
+          }
+        }
+        
+        // 毛利率
+        if (finMainData && finMainData.XSMLL != null) {
+          industryMetrics.gross_margin = `${parseFloat(finMainData.XSMLL).toFixed(2)}%`;
+        }
+        
+        // 存货周转率
+        if (incomeData && balanceData) {
+          const operateCost = incomeData.OPERATE_COST || 0;
+          const inventory = balanceData.INVENTORY || 0;
+          if (inventory > 0 && operateCost > 0) {
+            const invTurnover = operateCost / inventory;
+            industryMetrics.inventory_turnover = invTurnover.toFixed(2) + '次/年';
+          }
+        }
+        
+        // 保存行业指标
+        if (Object.keys(industryMetrics).length > 0) {
+          state.saFundamentals._industryMetrics = industryMetrics;
+          console.log(`[行业指标] 获取到数据:`, industryMetrics);
+        }
+      }
+    } catch (e) { console.log('行业指标计算失败:', e); }
+
+    // 8. 获取融资融券数据（最近60个交易日）
+    try {
+      const marginUrl = `https://push2his.eastmoney.com/api/qt/stock/kline/get?secid=${secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=101&fqt=0&lmt=60&end=20500101`;
+      const marginResp = await fetch(marginUrl);
+      const marginResult = await marginResp.json();
+      if (marginResult?.data?.klines) {
+        state.saFundamentals._marginData = marginResult.data.klines.map(line => {
+          const parts = line.split(',');
+          return {
+            date: parts[0],
+            financeBalance: parseFloat(parts[1]) || 0,
+            buyAmount: parseFloat(parts[2]) || 0,
+            repayAmount: parseFloat(parts[3]) || 0,
+            securitiesBalance: parseFloat(parts[4]) || 0,
+            sellAmount: parseFloat(parts[5]) || 0,
+            repaySecAmount: parseFloat(parts[6]) || 0
+          };
+        }).filter(d => d.financeBalance > 0 || d.securitiesBalance > 0);
+        console.log(`[融资融券] 获取到 ${state.saFundamentals._marginData.length} 条数据`);
+      }
+    } catch (e) { console.log('融资融券接口失败:', e); }
+
+    // 9. 获取北向资金数据（最近60个交易日）
+    try {
+      const northUrl = `https://push2his.eastmoney.com/api/qt/stock.hk2shen/get?secid=${secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58&lmt=60`;
+      const northResp = await fetch(northUrl);
+      const northResult = await northResp.json();
+      if (northResult?.data?.klines) {
+        state.saFundamentals._northData = northResult.data.klines.map(line => {
+          const parts = line.split(',');
+          return {
+            date: parts[0],
+            holdShares: parseFloat(parts[1]) || 0,
+            holdRatio: parseFloat(parts[2]) || 0,
+            holdAmount: parseFloat(parts[3]) || 0,
+            changeShares: parseFloat(parts[4]) || 0,
+            netBuy: parseFloat(parts[5]) || 0
+          };
+        }).filter(d => d.holdShares > 0);
+        console.log(`[北向资金] 获取到 ${state.saFundamentals._northData.length} 条数据`);
+      }
+    } catch (e) { console.log('北向资金接口失败:', e); }
+
+    // 如果当前K线图Tab处于激活状态，自动加载K线图
+    const activeKlineTab = document.querySelector('.sa-stock-card .sa-info-tab[data-infotab="kline"].active');
+    if (activeKlineTab) {
+      loadKlineChart('main');
+    }
+
   } catch (e) {
     console.error('拉取股票数据失败:', e);
     showToast('获取股票数据失败');
@@ -5260,8 +6320,14 @@ async function runStockAnalysis() {
 
   state.isSARunning = true;
 
-  // 隐藏搜索区，显示loading
+  // 同步折叠面板的指标数据
+  syncCollapsedMetrics();
+
+  // 隐藏搜索区和完整信息卡，显示折叠信息卡 + loading
   $('.sa-container').style.display = 'none';
+  $('#sa-stock-card-collapsed').style.display = '';
+  $('#sa-collapse-body').style.display = 'none';
+  $('#sa-collapse-arrow').classList.remove('expanded');
   $('#sa-result').style.display = 'none';
   $('#sa-loading').style.display = '';
   $('#sa-loading-text').textContent = '正在构建分析数据...';
@@ -5290,6 +6356,7 @@ async function runStockAnalysis() {
     }
   } catch (e) {
     $('#sa-loading').style.display = 'none';
+    $('#sa-stock-card-collapsed').style.display = 'none';
     console.error('股票分析错误:', e);
     if (e.message.includes('API key') || e.message.includes('401')) {
       showSettings();
@@ -5340,6 +6407,29 @@ function buildStockAnalysisText() {
   if (f.debtAssetRatio != null) text += `- 资产负债率: ${f.debtAssetRatio.toFixed(1)}%\n`;
   if (f.currentRatio != null) text += `- 流动比率: ${f.currentRatio.toFixed(2)}\n`;
   text += `\n`;
+  
+  // ===== 行业特色指标分析 =====
+  const industryConfig = matchIndustryConfig(f.industry);
+  if (industryConfig) {
+    text += `## 行业特色指标分析（${industryConfig.name}）\n`;
+    
+    // 先输出实际数据（如果有）
+    if (f._industryMetrics && Object.keys(f._industryMetrics).length > 0) {
+      text += `### 行业关键指标实际数据\n`;
+      Object.entries(f._industryMetrics).forEach(([key, value]) => {
+        const metric = industryConfig.metrics.find(m => m.key === key);
+        if (metric) {
+          text += `- **${metric.name}**: ${value}\n`;
+          text += `  - 说明：${metric.desc}\n`;
+          text += `  - 参考标准：${metric.threshold}\n`;
+        }
+      });
+      text += `\n`;
+    }
+    
+    // 输出分析提示
+    text += `${industryConfig.prompt}\n\n`;
+  }
 
   // 利润表
   text += `## 利润表\n`;
@@ -5451,7 +6541,525 @@ function buildStockAnalysisText() {
     text += `\n`;
   }
 
+  // 机构持股变化分析
+  if (f._holderData || (f._topHolders && f._topHolders.length > 0)) {
+    text += `## 大股东/机构持股变化分析\n`;
+    
+    // 股东总数变化
+    if (f._holderData) {
+      const holder = f._holderData;
+      const holderPrev = f._holderDataPrev;
+      
+      if (holder.HOLDER_TOTAL_NUM != null) {
+        text += `### 股东户数变化\n`;
+        text += `- 最新股东户数(${holder.END_DATE?.substring(0,10) || '最新'}): ${holder.HOLDER_TOTAL_NUM.toLocaleString()}户\n`;
+        if (holderPrev && holderPrev.HOLDER_TOTAL_NUM != null) {
+          const change = holder.HOLDER_TOTAL_NUM - holderPrev.HOLDER_TOTAL_NUM;
+          const changePct = ((change / holderPrev.HOLDER_TOTAL_NUM) * 100).toFixed(2);
+          const prevDate = holderPrev.END_DATE?.substring(0,10) || '上期';
+          text += `- 上期股东户数(${prevDate}): ${holderPrev.HOLDER_TOTAL_NUM.toLocaleString()}户\n`;
+          text += `- 变动: ${change > 0 ? '增加' : '减少'}${Math.abs(change).toLocaleString()}户 (${change > 0 ? '+' : ''}${changePct}%)\n`;
+          text += `- 解读: ${change < 0 ? '股东户数减少，筹码集中度提高，有利于股价上涨' : change > 0 ? '股东户数增加，筹码分散，需警惕' : '股东户数基本持平'}\n`;
+        }
+        text += `\n`;
+      }
+      
+      // 户均持股
+      if (holder.AVG_FREE_SHARES != null) {
+        text += `### 户均持股情况\n`;
+        text += `- 户均流通股东: ${holder.AVG_FREE_SHARES?.toLocaleString() || '--'}股\n`;
+        if (holder.AVG_HOLD_NUM != null) {
+          text += `- 户均持股: ${holder.AVG_HOLD_NUM?.toLocaleString() || '--'}股\n`;
+        }
+        if (holderPrev && holderPrev.AVG_FREE_SHARES != null) {
+          const avgChange = holder.AVG_FREE_SHARES - holderPrev.AVG_FREE_SHARES;
+          text += `- 上期户均流通股东: ${holderPrev.AVG_FREE_SHARES?.toLocaleString() || '--'}股\n`;
+          text += `- 变动: ${avgChange > 0 ? '增加' : '减少'}${Math.abs(avgChange).toLocaleString()}股\n`;
+          text += `- 解读: ${avgChange > 0 ? '户均持股增加，筹码集中' : avgChange < 0 ? '户均持股减少，筹码分散' : '户均持股基本持平'}\n`;
+        }
+        text += `\n`;
+      }
+    }
+    
+    // 十大流通股东
+    if (f._topHolders && f._topHolders.length > 0) {
+      text += `### 十大流通股东列表\n`;
+      text += `| 排名 | 股东名称 | 持股数(万股) | 占流通股比(%) | 本期变动(万股) | 变动日期 | 股东类型 |\n`;
+      text += `|-----|---------|-------------|---------------|---------------|----------|----------|\n`;
+      
+      f._topHolders.slice(0, 10).forEach((holder, idx) => {
+        const rank = idx + 1;
+        const holderName = holder.HOLDER_NAME || '--';
+        const holdShares = holder.FREE_SHARE_HOLD != null ? (holder.FREE_SHARE_HOLD / 10000).toFixed(2) : '--';
+        const holdRatio = holder.FREE_HOLD_RATIO != null ? holder.FREE_HOLD_RATIO.toFixed(2) : '--';
+        const holderType = holder.HOLDER_TYPE || '--';
+        
+        // 变动情况
+        let changeInfo = '--';
+        let changeNum = '--';
+        if (holder.HOLD_NUM_CHANGE != null) {
+          const change = holder.HOLD_NUM_CHANGE / 10000;
+          changeNum = change > 0 ? `+${change.toFixed(2)}` : change.toFixed(2);
+          if (change > 0) changeInfo = `增持${change.toFixed(2)}万`;
+          else if (change < 0) changeInfo = `减持${Math.abs(change).toFixed(2)}万`;
+          else changeInfo = '未变';
+        }
+        
+        // 变动日期
+        const changeDate = holder.END_DATE ? holder.END_DATE.substring(0, 10) : (holder.TRADE_DATE ? holder.TRADE_DATE.substring(0, 10) : '--');
+        
+        text += `| ${rank} | ${holderName} | ${holdShares} | ${holdRatio}% | ${changeNum} | ${changeDate} | ${holderType} |\n`;
+      });
+      
+      text += `\n`;
+      text += `**数据说明**：变动日期为报告期截止日期，变动数据相对上期对比\n\n`;
+      
+      // 机构持股总结
+      const institutionalHolders = f._topHolders.filter(h => 
+        h.HOLDER_TYPE && (h.HOLDER_TYPE.includes('机构') || h.HOLDER_TYPE.includes('基金') || h.HOLDER_TYPE.includes('保险') || h.HOLDER_TYPE.includes('券商') || h.HOLDER_TYPE.includes('社保') || h.HOLDER_TYPE.includes('信托'))
+      );
+      
+      if (institutionalHolders.length > 0) {
+        text += `### 机构持股特征分析\n`;
+        text += `- **十大流通股东中机构数量**: ${institutionalHolders.length}家\n`;
+        
+        // 计算机构总持股数和占比
+        const totalInstitutionalShares = institutionalHolders.reduce((sum, h) => {
+          return sum + (h.FREE_SHARE_HOLD || 0);
+        }, 0);
+        
+        const totalInstitutionalRatio = institutionalHolders.reduce((sum, h) => {
+          return sum + (h.FREE_HOLD_RATIO || 0);
+        }, 0);
+        
+        if (totalInstitutionalShares > 0) {
+          text += `- **机构总持股**: ${(totalInstitutionalShares / 10000).toFixed(2)}万股\n`;
+          text += `- **机构持股占流通股比**: ${totalInstitutionalRatio.toFixed(2)}%\n`;
+        }
+        
+        // 统计增减持情况
+        let increaseCount = 0;
+        let decreaseCount = 0;
+        let unchangedCount = 0;
+        let newEntryCount = 0; // 新进机构
+        
+        f._topHolders.forEach(h => {
+          if (h.HOLD_NUM_CHANGE != null) {
+            if (h.HOLD_NUM_CHANGE > 0) increaseCount++;
+            else if (h.HOLD_NUM_CHANGE < 0) decreaseCount++;
+            else unchangedCount++;
+          }
+          // 如果HOLD_NUM_CHANGE为null但持股比例>0，可能是新进
+          if (h.HOLD_NUM_CHANGE == null && h.FREE_SHARE_HOLD > 0) {
+            newEntryCount++;
+          }
+        });
+        
+        text += `- **增减持统计**: 增持${increaseCount}家 | 减持${decreaseCount}家 | 未变${unchangedCount}家 | 新进${newEntryCount}家\n`;
+        text += `- **机构态度解读**: ${increaseCount > decreaseCount ? '机构整体呈增持态势，看好公司前景' : increaseCount < decreaseCount ? '机构整体呈减持态势，需谨慎对待' : '机构增减持平，观望情绪较浓'}\n`;
+        text += `\n`;
+      }
+    }
+  }
+
+
+  // 融资融券分析
+  if (f._marginData && f._marginData.length > 0) {
+    text += `## 融资融券分析\n`;
+    const latest = f._marginData[f._marginData.length - 1];
+    const prev = f._marginData.length > 1 ? f._marginData[f._marginData.length - 2] : null;
+    text += `### 融资融券余额走势\n`;
+    text += `- **最新融资余额**(${latest.date}): ${(latest.financeBalance / 10000).toFixed(2)}亿元\n`;
+    if (prev) {
+      const change = latest.financeBalance - prev.financeBalance;
+      const changePct = prev.financeBalance > 0 ? (change / prev.financeBalance * 100).toFixed(2) : 0;
+      text += `- **上期融资余额**(${prev.date}): ${(prev.financeBalance / 10000).toFixed(2)}亿元\n`;
+      text += `- **变动**: ${change > 0 ? '增加' : '减少'}${(Math.abs(change) / 10000).toFixed(2)}亿元 (${change > 0 ? '+' : ''}${changePct}%)\n`;
+    }
+    if (latest.securitiesBalance > 0) {
+      text += `- **最新融券余额**: ${(latest.securitiesBalance / 10000).toFixed(2)}亿元\n`;
+    }
+    text += `\n`;
+    const last5 = f._marginData.slice(-5);
+    if (last5.length >= 2) {
+      const trend5d = last5[last5.length - 1].financeBalance - last5[0].financeBalance;
+      text += `### 近期趋势分析\n`;
+      text += `- **近5日融资变动**: ${trend5d > 0 ? '增加' : '减少'}${(Math.abs(trend5d) / 10000).toFixed(2)}亿元\n`;
+      text += `- **趋势判断**: ${trend5d > 0 ? '融资余额上升，杠杆资金看多' : trend5d < 0 ? '融资余额下降，杠杆资金看空' : '融资余额持平'}\n`;
+      text += `\n`;
+    }
+  }
+
+  // 北向资金分析  
+  if (f._northData && f._northData.length > 0) {
+    text += `## 北向资金（外资）分析\n`;
+    const latest = f._northData[f._northData.length - 1];
+    text += `### 北向资金持股走势\n`;
+    text += `- **最新持股数**(${latest.date}): ${(latest.holdShares / 10000).toFixed(2)}亿股\n`;
+    text += `- **持股比例**: ${latest.holdRatio.toFixed(2)}%\n`;
+    text += `- **持股市值**: ${(latest.holdAmount / 10000).toFixed(2)}亿元\n`;
+    text += `\n`;
+    const last5 = f._northData.slice(-5);
+    if (last5.length >= 2) {
+      const netBuy5d = last5.reduce((sum, d) => sum + d.netBuy, 0);
+      text += `### 近期资金流向\n`;
+      text += `- **近5日净流入**: ${(netBuy5d / 10000).toFixed(2)}亿元 (${netBuy5d > 0 ? '🔴 净流入' : netBuy5d < 0 ? '🟢 净流出' : '持平'})\n`;
+      text += `\n`;
+    }
+    const netBuy30d = f._northData.slice(-30).reduce((sum, d) => sum + d.netBuy, 0);
+    text += `### 外资态度总结\n`;
+    text += `- **近30日净流向**: ${(netBuy30d / 10000).toFixed(2)}亿元\n`;
+    text += `- **外资立场**: ${netBuy30d > 0 ? '🔴 外资整体看好' : netBuy30d < 0 ? '🟢 外资整体看空' : '外资态度中性'}\n`;
+    text += `\n`;
+  }
+
+  // 综合多空信号分析
+  if ((f._marginData && f._marginData.length > 0) || (f._northData && f._northData.length > 0)) {
+    text += `## 多空信号综合分析\n`;
+    text += `| 指标 | 近期趋势 | 信号 | 强度 |\n`;
+    text += `|------|---------|------|------|\n`;
+    let bullish = 0, bearish = 0;
+    if (f._marginData && f._marginData.length > 0) {
+      const trend5d = f._marginData.slice(-5);
+      if (trend5d.length >= 2) {
+        const change = trend5d[trend5d.length - 1].financeBalance - trend5d[0].financeBalance;
+        const signal = change > 0 ? '看多' : change < 0 ? '看空' : '中性';
+        text += `| 融资余额 | ${change > 0 ? '上升' : '下降'} | ${signal} | ${Math.abs(change)/trend5d[0].financeBalance > 0.01 ? '⭐⭐' : '⭐'} |\n`;
+        if (change > 0) bullish++; else if (change < 0) bearish++;
+      }
+    }
+    if (f._northData && f._northData.length > 0) {
+      const netBuy5d = f._northData.slice(-5).reduce((sum, d) => sum + d.netBuy, 0);
+      const signal = netBuy5d > 0 ? '看多' : netBuy5d < 0 ? '看空' : '中性';
+      text += `| 北向资金 | ${netBuy5d > 0 ? '净流入' : '净流出'} | ${signal} | ${Math.abs(netBuy5d)/f._northData.slice(-5)[0].holdAmount > 0.005 ? '⭐⭐' : '⭐'} |\n`;
+      if (netBuy5d > 0) bullish++; else if (netBuy5d < 0) bearish++;
+    }
+    text += `\n### 综合多空判断\n`;
+    if (bullish > bearish) {
+      text += `- **多方信号**: ${bullish}个 | **空方信号**: ${bearish}个\n`;
+      text += `- **综合结论**: 🔴 **市场整体看多**，建议关注回调买入机会\n`;
+    } else if (bearish > bullish) {
+      text += `- **多方信号**: ${bullish}个 | **空方信号**: ${bearish}个\n`;  
+      text += `- **综合结论**: 🟢 **市场整体看空**，建议谨慎观望\n`;
+    } else {
+      text += `- **多方信号**: ${bullish}个 | **空方信号**: ${bearish}个\n`;
+      text += `- **综合结论**: ⚪ **市场分歧较大**，建议等待明确信号\n`;
+    }
+    text += `\n`;
+  }
   return text;
+}
+
+/**
+ * 加载K线图
+ * 调用东方财富K线数据API，Canvas绘制
+ * @param {string} mode - 'main' 主信息卡, 'collapsed' 折叠信息卡
+ */
+async function loadKlineChart(mode) {
+  const stock = state.saStock;
+  if (!stock) return;
+
+  let container, periodSelect;
+  if (mode === 'main') {
+    container = $('#sa-kline-container');
+    periodSelect = $('#sa-kline-period');
+  } else {
+    container = $('#sa-collapse-kline-container');
+    periodSelect = $('#sa-collapse-kline-period');
+  }
+  if (!container || !periodSelect) return;
+
+  const period = periodSelect.value;
+  const code = stock.code;
+  const marketCode = code.startsWith('6') || code.startsWith('9') ? '1' : '0';
+  const secid = `${marketCode}.${code}`;
+
+  // K线类型映射 (东方财富API参数)
+  const kltMap = { daily: '101', weekly: '102', monthly: '103' };
+  const klt = kltMap[period] || '101';
+
+  container.innerHTML = '<div class="sa-kline-placeholder">⏳ 加载K线数据中...</div>';
+
+  try {
+    console.log(`[K线图] 请求K线数据 - secid: ${secid}, klt: ${klt}`);
+
+    // 使用专用的K线数据接口
+    const result = await new Promise((resolve, reject) => {
+      chrome.runtime.sendMessage(
+        { type: 'FETCH_KLINE_DATA', secid, klt, fqt: 1, lmt: 120 },
+        (resp) => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+            return;
+          }
+          if (!resp || resp.error) {
+            reject(new Error(resp?.error || '请求失败'));
+            return;
+          }
+          resolve(resp);
+        }
+      );
+    });
+
+    const klineData = result.data;
+    console.log('[K线图] 收到数据，类型:', typeof klineData);
+    console.log('[K线图] 完整数据结构:', JSON.stringify(klineData, null, 2).substring(0, 1000));
+    console.log('[K线图] result对象:', JSON.stringify(result, null, 2).substring(0, 500));
+
+    // 检查数据结构
+    if (!klineData) {
+      console.error('[K线图] klineData为null或undefined');
+      console.error('[K线图] result完整内容:', result);
+      container.innerHTML = '<div class="sa-kline-placeholder">K线数据为空</div>';
+      return;
+    }
+    
+    if (!klineData.data) {
+      console.error('[K线图] klineData.data不存在');
+      console.error('[K线图] klineData的keys:', Object.keys(klineData));
+      console.error('[K线图] klineData完整内容:', JSON.stringify(klineData, null, 2));
+      container.innerHTML = '<div class="sa-kline-placeholder">K线数据格式异常</div>';
+      return;
+    }
+
+    const klines = klineData.data.klines;
+    if (!klines || klines.length === 0) {
+      console.warn('[K线图] 无K线数据，完整响应:', JSON.stringify(klineData).substring(0, 500));
+      container.innerHTML = '<div class="sa-kline-placeholder">暂无K线数据</div>';
+      return;
+    }
+
+    console.log(`[K线图] 解析${klines.length}条K线数据，第一条:`, klines[0]);
+
+    // 解析K线数据
+    const parsedKlines = klines.map(line => {
+      const parts = line.split(',');
+      return {
+        date: parts[0],
+        open: parseFloat(parts[1]),
+        close: parseFloat(parts[2]),
+        high: parseFloat(parts[3]),
+        low: parseFloat(parts[4]),
+        volume: parseFloat(parts[5]),
+        change: parseFloat(parts[6] || 0),
+        changePct: parseFloat(parts[7] || 0),
+        turnover: parseFloat(parts[8] || 0)
+      };
+    });
+
+    console.log('[K线图] 解析完成，准备渲染');
+    renderKlineCanvas(container, parsedKlines, stock.name);
+  } catch (e) {
+    console.error('[K线图] 加载失败:', e);
+    container.innerHTML = `<div class="sa-kline-placeholder">K线数据加载失败<br><small>${e.message}</small></div>`;
+  }
+}
+
+/**
+ * Canvas绘制K线图
+ * @param {HTMLElement} container - 容器元素
+ * @param {Array} klines - K线数据数组
+ * @param {string} stockName - 股票名称
+ */
+function renderKlineCanvas(container, klines, stockName) {
+  const width = container.clientWidth || 400;
+  const height = 300;
+  const volumeHeight = 60;
+  const chartHeight = height - volumeHeight - 50;
+
+  // 创建canvas
+  const canvas = document.createElement('canvas');
+  canvas.width = width * 2; // 高清
+  canvas.height = height * 2;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+  
+  container.innerHTML = '';
+  container.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2); // 高清
+
+  // 边距
+  const padding = { top: 30, right: 50, bottom: 10, left: 10 };
+  const drawWidth = width - padding.left - padding.right;
+  const drawHeight = chartHeight - padding.top - padding.bottom;
+
+  // 计算价格范围
+  const closes = klines.map(k => k.close);
+  const highs = klines.map(k => k.high);
+  const lows = klines.map(k => k.low);
+  const maxPrice = Math.max(...highs);
+  const minPrice = Math.min(...lows);
+  const priceRange = maxPrice - minPrice || 1;
+
+  // 计算成交量范围
+  const maxVolume = Math.max(...klines.map(k => k.volume)) || 1;
+
+  // 绘制参数
+  const barWidth = Math.max(1, (drawWidth / klines.length) * 0.7);
+  const barGap = drawWidth / klines.length;
+
+  // 背景
+  ctx.fillStyle = '#fafbfc';
+  ctx.fillRect(0, 0, width, height);
+
+  // 标题
+  ctx.fillStyle = '#202124';
+  ctx.font = 'bold 12px -apple-system, sans-serif';
+  ctx.fillText(`${stockName} K线图`, padding.left, 18);
+
+  // 最新价
+  const lastK = klines[klines.length - 1];
+  const lastPrice = lastK.close;
+  const lastChange = lastK.changePct;
+  ctx.fillStyle = lastChange >= 0 ? '#e53935' : '#34a853';
+  ctx.font = 'bold 11px -apple-system, sans-serif';
+  ctx.fillText(`${lastPrice.toFixed(2)}  ${lastChange >= 0 ? '+' : ''}${lastChange.toFixed(2)}%`, padding.left + 100, 18);
+
+  // 价格刻度线
+  ctx.strokeStyle = '#f0f0f0';
+  ctx.lineWidth = 0.5;
+  ctx.font = '10px monospace';
+  ctx.fillStyle = '#9aa0a6';
+  const priceSteps = 4;
+  for (let i = 0; i <= priceSteps; i++) {
+    const y = padding.top + (drawHeight / priceSteps) * i;
+    const price = maxPrice - (priceRange / priceSteps) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    ctx.fillText(price.toFixed(2), width - padding.right + 4, y + 3);
+  }
+
+  // 绘制K线
+  const toY = (price) => padding.top + (1 - (price - minPrice) / priceRange) * drawHeight;
+
+  klines.forEach((k, i) => {
+    const x = padding.left + barGap * i + barGap / 2;
+    const isUp = k.close >= k.open;
+    const color = isUp ? '#e53935' : '#34a853';
+
+    // 影线（上下影线）
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, toY(k.high));
+    ctx.lineTo(x, toY(k.low));
+    ctx.stroke();
+
+    // 实体
+    const bodyTop = toY(Math.max(k.open, k.close));
+    const bodyBottom = toY(Math.min(k.open, k.close));
+    const bodyHeight = Math.max(1, bodyBottom - bodyTop);
+
+    if (isUp) {
+      ctx.fillStyle = '#fff';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1;
+      ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+      ctx.strokeRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+    } else {
+      ctx.fillStyle = color;
+      ctx.fillRect(x - barWidth / 2, bodyTop, barWidth, bodyHeight);
+    }
+
+    // 成交量
+    const volTop = chartHeight + (1 - k.volume / maxVolume) * volumeHeight;
+    const volHeight = (k.volume / maxVolume) * volumeHeight;
+    ctx.fillStyle = isUp ? 'rgba(229,57,53,0.3)' : 'rgba(52,168,83,0.3)';
+    ctx.fillRect(x - barWidth / 2, volTop, barWidth, volHeight);
+  });
+
+  // 5日均线
+  if (klines.length >= 5) {
+    ctx.strokeStyle = '#f9a825';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    let started = false;
+    klines.forEach((k, i) => {
+      if (i < 4) return;
+      const ma5 = klines.slice(i - 4, i + 1).reduce((s, k) => s + k.close, 0) / 5;
+      const x = padding.left + barGap * i + barGap / 2;
+      const y = toY(ma5);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // 20日均线
+  if (klines.length >= 20) {
+    ctx.strokeStyle = '#1a73e8';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    let started = false;
+    klines.forEach((k, i) => {
+      if (i < 19) return;
+      const ma20 = klines.slice(i - 19, i + 1).reduce((s, k) => s + k.close, 0) / 20;
+      const x = padding.left + barGap * i + barGap / 2;
+      const y = toY(ma20);
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // 日期标签（显示首尾和中间）
+  ctx.fillStyle = '#9aa0a6';
+  ctx.font = '9px monospace';
+  ctx.textAlign = 'center';
+  const labelIndices = [0, Math.floor(klines.length / 2), klines.length - 1];
+  labelIndices.forEach(i => {
+    const x = padding.left + barGap * i + barGap / 2;
+    ctx.fillText(klines[i].date.substring(2), x, height - 2);
+  });
+
+  // 均线图例
+  ctx.textAlign = 'left';
+  ctx.font = '10px sans-serif';
+  ctx.fillStyle = '#f9a825';
+  ctx.fillText('MA5', padding.left + 200, 18);
+  ctx.fillStyle = '#1a73e8';
+  ctx.fillText('MA20', padding.left + 240, 18);
+}
+
+/**
+ * 同步折叠面板的指标数据
+ */
+function syncCollapsedMetrics() {
+  const stock = state.saStock;
+  if (!stock) return;
+
+  // 同步基本信息
+  const nameEl = $('#sa-collapse-name');
+  const codeEl = $('#sa-collapse-code');
+  const priceEl = $('#sa-collapse-price');
+  const changeEl = $('#sa-collapse-change');
+  if (nameEl) nameEl.textContent = stock.name || '--';
+  if (codeEl) codeEl.textContent = stock.code || '--';
+  if (priceEl) priceEl.textContent = stock.price ? `¥${stock.price.toFixed(2)}` : '--';
+  if (changeEl) {
+    if (stock.changePct != null) {
+      const pct = stock.changePct;
+      changeEl.textContent = `${pct > 0 ? '+' : ''}${pct.toFixed(2)}%`;
+      changeEl.style.color = pct > 0 ? 'var(--accent)' : pct < 0 ? 'var(--success)' : 'inherit';
+    } else {
+      changeEl.textContent = '--';
+    }
+  }
+
+  // 同步指标数据
+  const metricIds = ['pe', 'pb', 'mv', 'roe', 'gm', 'nm', 'revg', 'npg', 'dar', 'roic', 'ocf', 'fcf'];
+  metricIds.forEach(id => {
+    const mainEl = $(`#sa-metric-${id}`);
+    const collapseEl = $(`#sa-collapse-metric-${id}`);
+    if (mainEl && collapseEl) {
+      collapseEl.textContent = mainEl.textContent;
+      collapseEl.style.color = mainEl.style.color || 'inherit';
+    }
+  });
 }
 
 /**
@@ -5480,6 +7088,25 @@ function renderSAReportStreaming(markdown) {
     container.classList.remove('streaming-cursor');
     addSectionIdsAndPlayButtons(container);
     buildTOC();
+    buildTTSSectionsFrom(container);
+  }, 3000);
+}
+
+/**
+ * 渲染选股器报告（流式）
+ */
+function renderScreenerReportStreaming(markdown) {
+  const container = $('#screener-content');
+  if ($('#screener-result').style.display === 'none') {
+    $('#screener-result').style.display = '';
+    $('#screener-loading').style.display = 'none';
+  }
+  container.innerHTML = renderMarkdown(markdown);
+  container.classList.add('streaming-cursor');
+  clearTimeout(window._screenerStreamTimeout);
+  window._screenerStreamTimeout = setTimeout(() => {
+    container.classList.remove('streaming-cursor');
+    addSectionIdsAndPlayButtons(container);
     buildTTSSectionsFrom(container);
   }, 3000);
 }
@@ -5675,11 +7302,24 @@ function renderLLMServicesList() {
  * 切换当前使用的模型服务
  */
 function switchLLMService(serviceId) {
+  const service = state.settings.services.find(s => s.id === serviceId);
+  if (!service) {
+    showToast('服务不存在');
+    return;
+  }
+  
   state.settings.activeServiceId = serviceId;
-  localStorage.setItem('er_settings', JSON.stringify(state.settings));
+  
+  // 同步更新顶层字段（向后兼容）
+  state.settings.provider = service.provider;
+  state.settings.baseUrl = service.baseUrl;
+  state.settings.apiKey = service.apiKey;
+  state.settings.model = service.model;
+  
+  StorageManager.saveSettings(state.settings);
   loadActiveService();
   renderLLMServicesList();
-  showToast(`已切换到: ${state.settings.services.find(s => s.id === serviceId)?.name}`);
+  showToast(`已切换到: ${service.name}`);
 }
 
 /**
@@ -5772,6 +7412,14 @@ function saveLLMService() {
         ...state.settings.services[serviceIndex],
         ...serviceData
       };
+      
+      // 如果编辑的是当前激活的服务，同步更新顶层字段
+      if (editingId === state.settings.activeServiceId) {
+        state.settings.provider = serviceData.provider;
+        state.settings.baseUrl = serviceData.baseUrl;
+        state.settings.apiKey = serviceData.apiKey;
+        state.settings.model = serviceData.model;
+      }
     }
   } else {
     // 添加新服务
@@ -5782,10 +7430,10 @@ function saveLLMService() {
     state.settings.services.push(newService);
   }
   
-  localStorage.setItem('er_settings', JSON.stringify(state.settings));
+  StorageManager.saveSettings(state.settings);
   $('#llm-service-editor').style.display = 'none';
   renderLLMServicesList();
-  showToast('已保存模型服务');
+  showToast('已保存模型服务（已备份）');
 }
 
 /**
@@ -5793,4 +7441,260 @@ function saveLLMService() {
  */
 function cancelEditLLMService() {
   $('#llm-service-editor').style.display = 'none';
+}
+
+// ======================== 数据管理功能 ========================
+
+/**
+ * 导出配置数据
+ */
+function exportSettings() {
+  try {
+    const jsonData = StorageManager.exportSettings();
+    if (!jsonData) {
+      showToast('没有可导出的配置');
+      return;
+    }
+    
+    // 解析配置数据
+    const configData = JSON.parse(jsonData);
+    
+    // 添加情感缓存（如果存在）
+    try {
+      const sentimentCache = localStorage.getItem('er_sentiment_cache');
+      if (sentimentCache) {
+        configData._sentimentCache = JSON.parse(sentimentCache);
+      }
+    } catch (e) {
+      console.warn('导出情感缓存失败:', e);
+    }
+    
+    // 创建下载文件
+    const blob = new Blob([JSON.stringify(configData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `investment-assistant-config-${new Date().toISOString().slice(0,10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    // 显示Token节省统计
+    const stats = getSentimentCacheStats();
+    let tokenMsg = '';
+    if (stats.valid > 0) {
+      const estimatedTokens = stats.valid * 150; // 每条约150 tokens
+      const estimatedCost = (estimatedTokens / 1000 * 0.001).toFixed(4); // 假设$0.001/1K tokens
+      tokenMsg = `\n\n💰 情感缓存：${stats.valid}条有效缓存，预计节省${estimatedTokens} tokens（约$${estimatedCost}）`;
+    }
+    
+    showToast(`✅ 配置已导出${tokenMsg}`);
+  } catch (e) {
+    console.error('导出配置失败:', e);
+    showToast('导出配置失败');
+  }
+}
+
+/**
+ * 导入配置数据
+ */
+function importSettings(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const jsonData = e.target.result;
+      const parsed = JSON.parse(jsonData);
+      
+      // 提取情感缓存（如果存在）
+      let sentimentCache = null;
+      if (parsed._sentimentCache) {
+        sentimentCache = parsed._sentimentCache;
+        delete parsed._sentimentCache; // 从配置中移除
+      }
+      
+      // 导入配置
+      const success = StorageManager.importSettings(JSON.stringify(parsed));
+      if (success) {
+        // 恢复情感缓存
+        if (sentimentCache && Object.keys(sentimentCache).length > 0) {
+          localStorage.setItem('er_sentiment_cache', JSON.stringify(sentimentCache));
+        }
+        
+        showToast('✅ 配置已导入，页面将刷新');
+        setTimeout(() => location.reload(), 1000);
+      } else {
+        showToast('导入失败：数据格式无效');
+      }
+    } catch (err) {
+      console.error('导入配置失败:', err);
+      showToast('导入失败：文件格式错误');
+    }
+  };
+  reader.readAsText(file);
+}
+
+/**
+ * 清除所有设置
+ */
+function clearAllSettings() {
+  if (!confirm('确定要清除所有配置数据吗？此操作不可恢复！')) {
+    return;
+  }
+  
+  if (!confirm('再次确认：清除后需要重新配置所有模型服务和关注公司')) {
+    return;
+  }
+  
+  StorageManager.clearSettings();
+  
+  // 同时清除情感缓存
+  localStorage.removeItem('er_sentiment_cache');
+  
+  showToast('✅ 所有数据已清除，页面将刷新');
+  setTimeout(() => location.reload(), 1000);
+}
+
+/**
+ * 获取情感缓存统计信息
+ */
+function getSentimentCacheStats() {
+  try {
+    const cache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
+    const keys = Object.keys(cache);
+    const now = Date.now();
+    const CACHE_TTL = 24 * 60 * 60 * 1000;
+    
+    let validCount = 0;
+    let expiredCount = 0;
+    let positiveCount = 0;
+    let negativeCount = 0;
+    let neutralCount = 0;
+    
+    keys.forEach(key => {
+      const item = cache[key];
+      const age = now - (item.timestamp || 0);
+      
+      if (age < CACHE_TTL) {
+        validCount++;
+        if (item.sentiment === 'positive') positiveCount++;
+        else if (item.sentiment === 'negative') negativeCount++;
+        else neutralCount++;
+      } else {
+        expiredCount++;
+      }
+    });
+    
+    return {
+      total: keys.length,
+      valid: validCount,
+      expired: expiredCount,
+      positive: positiveCount,
+      negative: negativeCount,
+      neutral: neutralCount,
+      size: new Blob([JSON.stringify(cache)]).size
+    };
+  } catch (e) {
+    return { total: 0, valid: 0, expired: 0, positive: 0, negative: 0, neutral: 0, size: 0 };
+  }
+}
+
+/**
+ * 清理过期的情感缓存
+ */
+function cleanExpiredSentimentCache() {
+  try {
+    const cache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
+    const now = Date.now();
+    const CACHE_TTL = 24 * 60 * 60 * 1000;
+    
+    let cleanedCount = 0;
+    Object.keys(cache).forEach(key => {
+      const age = now - (cache[key].timestamp || 0);
+      if (age >= CACHE_TTL) {
+        delete cache[key];
+        cleanedCount++;
+      }
+    });
+    
+    localStorage.setItem('er_sentiment_cache', JSON.stringify(cache));
+    return cleanedCount;
+  } catch (e) {
+    console.error('清理情感缓存失败:', e);
+    return 0;
+  }
+}
+
+/**
+ * 清空所有情感缓存
+ */
+function clearSentimentCache() {
+  localStorage.removeItem('er_sentiment_cache');
+  state.companySentimentCache = {};
+  showToast('✅ 情感缓存已清空');
+}
+
+/**
+ * 显示存储信息
+ */
+function showStorageInfo() {
+  const container = $('#storage-info');
+  if (!container) return;
+  
+  const settings = localStorage.getItem('er_settings');
+  const watchlist = localStorage.getItem('er_watchlist');
+  const settingsSize = settings ? (new Blob([settings]).size / 1024).toFixed(2) : '0';
+  const watchlistSize = watchlist ? (new Blob([watchlist]).size / 1024).toFixed(2) : '0';
+  
+  let settingsInfo = '未配置';
+  let version = '未知';
+  let lastSaved = '未知';
+  
+  if (settings) {
+    try {
+      const data = JSON.parse(settings);
+      settingsInfo = `${data.services?.length || 0}个模型服务`;
+      version = data._version || '未知';
+      lastSaved = data._lastSaved ? new Date(data._lastSaved).toLocaleString('zh-CN') : '未知';
+    } catch (e) {}
+  }
+  
+  let watchlistCount = 0;
+  if (watchlist) {
+    try {
+      const data = JSON.parse(watchlist);
+      watchlistCount = (data.items || data).length || 0;
+    } catch (e) {}
+  }
+  
+  container.innerHTML = `
+    <div class="storage-info-item">
+      <span class="storage-info-label">数据版本</span>
+      <span class="storage-info-value">${version}</span>
+    </div>
+    <div class="storage-info-item">
+      <span class="storage-info-label">模型服务</span>
+      <span class="storage-info-value">${settingsInfo}</span>
+    </div>
+    <div class="storage-info-item">
+      <span class="storage-info-label">关注公司</span>
+      <span class="storage-info-value">${watchlistCount}家</span>
+    </div>
+    <div class="storage-info-item">
+      <span class="storage-info-label">配置大小</span>
+      <span class="storage-info-value">${settingsSize} KB</span>
+    </div>
+    <div class="storage-info-item">
+      <span class="storage-info-label">关注列表大小</span>
+      <span class="storage-info-value">${watchlistSize} KB</span>
+    </div>
+    <div class="storage-info-item">
+      <span class="storage-info-label">最后保存</span>
+      <span class="storage-info-value">${lastSaved}</span>
+    </div>
+    <div class="storage-info-item">
+      <span class="storage-info-label">备份状态</span>
+      <span class="storage-info-value" style="color:var(--success)">✓ 已启用chrome.storage备份</span>
+    </div>
+  `;
 }

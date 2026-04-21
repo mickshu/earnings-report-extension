@@ -173,6 +173,14 @@
             <button class="hs-type-tab active" data-type="news">📰 资讯</button>
             <button class="hs-type-tab" data-type="announcement">📋 公告</button>
           </div>
+          
+          <!-- 情感筛选标签 -->
+          <div id="hs-sentiment-chips" class="hs-sentiment-tabs">
+            <button class="hs-sentiment-tab active" data-sentiment="all">全部</button>
+            <button class="hs-sentiment-tab positive" data-sentiment="positive">🔴 利好</button>
+            <button class="hs-sentiment-tab negative" data-sentiment="negative">🟢 利空</button>
+            <button class="hs-sentiment-tab neutral" data-sentiment="neutral">⚪ 中性</button>
+          </div>
 
           <!-- 公司资讯/公告列表 -->
           <div id="hs-company-list" class="hs-list">
@@ -496,26 +504,100 @@
               <span id="sa-stock-change" class="val-stock-change">--</span>
             </div>
           </div>
-          <!-- 核心指标概览 -->
-          <div class="val-stock-metrics">
-            <div class="val-metric"><span class="val-metric-label">PE(TTM)</span><span id="sa-metric-pe" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">PB</span><span id="sa-metric-pb" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">市值</span><span id="sa-metric-mv" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">ROE</span><span id="sa-metric-roe" class="val-metric-value">--</span></div>
+
+          <!-- 信息卡子Tab导航 -->
+          <nav class="sa-info-tabs">
+            <button class="sa-info-tab active" data-infotab="metrics">📊 关键指标</button>
+            <button class="sa-info-tab" data-infotab="kline">📈 K线图</button>
+          </nav>
+
+          <!-- 关键指标子面板 -->
+          <div id="sa-info-metrics-panel" class="sa-info-sub-panel active">
+            <div class="val-stock-metrics">
+              <div class="val-metric"><span class="val-metric-label">PE(TTM)</span><span id="sa-metric-pe" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">PB</span><span id="sa-metric-pb" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">市值</span><span id="sa-metric-mv" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">ROE</span><span id="sa-metric-roe" class="val-metric-value">--</span></div>
+            </div>
+            <div class="val-stock-metrics">
+              <div class="val-metric"><span class="val-metric-label">毛利率</span><span id="sa-metric-gm" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">净利率</span><span id="sa-metric-nm" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">营收增速</span><span id="sa-metric-revg" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">利润增速</span><span id="sa-metric-npg" class="val-metric-value">--</span></div>
+            </div>
+            <div class="val-stock-metrics">
+              <div class="val-metric"><span class="val-metric-label">负债率</span><span id="sa-metric-dar" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">ROIC</span><span id="sa-metric-roic" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">经营CF(亿)</span><span id="sa-metric-ocf" class="val-metric-value">--</span></div>
+              <div class="val-metric"><span class="val-metric-label">FCF(亿)</span><span id="sa-metric-fcf" class="val-metric-value">--</span></div>
+            </div>
           </div>
-          <div class="val-stock-metrics">
-            <div class="val-metric"><span class="val-metric-label">毛利率</span><span id="sa-metric-gm" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">净利率</span><span id="sa-metric-nm" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">营收增速</span><span id="sa-metric-revg" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">利润增速</span><span id="sa-metric-npg" class="val-metric-value">--</span></div>
+
+          <!-- K线图子面板 -->
+          <div id="sa-info-kline-panel" class="sa-info-sub-panel">
+            <div class="sa-kline-toolbar">
+              <select id="sa-kline-period" class="sa-kline-select">
+                <option value="daily">日K</option>
+                <option value="weekly">周K</option>
+                <option value="monthly">月K</option>
+              </select>
+            </div>
+            <div id="sa-kline-container" class="sa-kline-container">
+              <div class="sa-kline-placeholder">📈 选择股票后加载K线图</div>
+            </div>
           </div>
-          <div class="val-stock-metrics">
-            <div class="val-metric"><span class="val-metric-label">负债率</span><span id="sa-metric-dar" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">ROIC</span><span id="sa-metric-roic" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">经营CF(亿)</span><span id="sa-metric-ocf" class="val-metric-value">--</span></div>
-            <div class="val-metric"><span class="val-metric-label">FCF(亿)</span><span id="sa-metric-fcf" class="val-metric-value">--</span></div>
-          </div>
+
           <button id="btn-sa-start" class="btn btn-primary" style="width:100%;margin-top:10px">🚀 开始投资分析</button>
+        </div>
+
+        <!-- 分析结果时折叠的股票信息卡 -->
+        <div id="sa-stock-card-collapsed" class="sa-stock-card-collapsed" style="display:none">
+          <div class="sa-collapse-header" id="sa-collapse-toggle">
+            <div class="sa-collapse-info">
+              <span id="sa-collapse-name" class="val-stock-name">--</span>
+              <span id="sa-collapse-code" class="val-stock-code">--</span>
+              <span id="sa-collapse-price" class="val-stock-price" style="font-size:16px">--</span>
+              <span id="sa-collapse-change" class="val-stock-change" style="font-size:12px">--</span>
+            </div>
+            <span class="sa-collapse-arrow" id="sa-collapse-arrow">▶</span>
+          </div>
+          <div id="sa-collapse-body" class="sa-collapse-body" style="display:none">
+            <nav class="sa-info-tabs">
+              <button class="sa-info-tab active" data-infotab="metrics">📊 关键指标</button>
+              <button class="sa-info-tab" data-infotab="kline">📈 K线图</button>
+            </nav>
+            <div id="sa-collapse-metrics" class="sa-info-sub-panel active">
+              <div class="val-stock-metrics">
+                <div class="val-metric"><span class="val-metric-label">PE(TTM)</span><span id="sa-collapse-metric-pe" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">PB</span><span id="sa-collapse-metric-pb" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">市值</span><span id="sa-collapse-metric-mv" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">ROE</span><span id="sa-collapse-metric-roe" class="val-metric-value">--</span></div>
+              </div>
+              <div class="val-stock-metrics">
+                <div class="val-metric"><span class="val-metric-label">毛利率</span><span id="sa-collapse-metric-gm" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">净利率</span><span id="sa-collapse-metric-nm" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">营收增速</span><span id="sa-collapse-metric-revg" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">利润增速</span><span id="sa-collapse-metric-npg" class="val-metric-value">--</span></div>
+              </div>
+              <div class="val-stock-metrics">
+                <div class="val-metric"><span class="val-metric-label">负债率</span><span id="sa-collapse-metric-dar" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">ROIC</span><span id="sa-collapse-metric-roic" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">经营CF(亿)</span><span id="sa-collapse-metric-ocf" class="val-metric-value">--</span></div>
+                <div class="val-metric"><span class="val-metric-label">FCF(亿)</span><span id="sa-collapse-metric-fcf" class="val-metric-value">--</span></div>
+              </div>
+            </div>
+            <div id="sa-collapse-kline" class="sa-info-sub-panel">
+              <div class="sa-kline-toolbar">
+                <select id="sa-collapse-kline-period" class="sa-kline-select">
+                  <option value="daily">日K</option>
+                  <option value="weekly">周K</option>
+                  <option value="monthly">月K</option>
+                </select>
+              </div>
+              <div id="sa-collapse-kline-container" class="sa-kline-container">
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -530,6 +612,7 @@
         <div class="result-header">
           <h2 id="sa-report-title">股票分析报告</h2>
           <div class="result-actions">
+            <button id="btn-sa-switch-stock" class="icon-btn" title="分析另一只股票">🔍</button>
             <button id="btn-sa-regenerate" class="icon-btn" title="重新分析">🔄</button>
             <button id="btn-sa-export-md" class="icon-btn" title="导出 Markdown">💾</button>
             <button id="btn-sa-copy" class="icon-btn" title="复制报告">📋</button>
@@ -537,6 +620,7 @@
         </div>
         <article id="sa-content" class="report-content"></article>
         <div class="result-footer">
+          <button id="btn-sa-switch-stock-footer" class="btn btn-secondary" style="margin-right:8px">🔍 分析另一只股票</button>
           <button id="btn-sa-chat" class="btn btn-primary">💬 继续对话深入分析 →</button>
         </div>
       </div>
@@ -572,6 +656,7 @@
       <nav class="settings-sub-tabs">
         <button class="settings-sub-tab active" data-subtab="llm">🤖 大模型配置</button>
         <button class="settings-sub-tab" data-subtab="watchlist">⭐ 关注公司</button>
+        <button class="settings-sub-tab" data-subtab="datamgmt">💾 数据管理</button>
       </nav>
       
       <div class="settings-content">
@@ -652,6 +737,47 @@
               <!-- 动态填充 -->
             </div>
           </div>
+        </div>
+        
+        <!-- ===== 数据管理子面板 ===== -->
+        <div id="settings-datamgmt-panel" class="settings-sub-panel">
+          <div class="setting-group">
+            <label class="setting-label">📦 数据备份与恢复</label>
+            <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 16px">
+              配置数据已自动备份到chrome.storage，扩展更新后自动恢复。<br>
+              您也可以手动导出/导入配置文件。
+            </p>
+            <div class="data-mgmt-actions">
+              <button id="btn-export-settings" class="btn btn-secondary">📤 导出配置</button>
+              <button id="btn-import-settings" class="btn btn-secondary">📥 导入配置</button>
+              <button id="btn-clear-settings" class="btn btn-danger">🗑️ 清除所有数据</button>
+            </div>
+            <input type="file" id="import-file-input" accept=".json" style="display:none">
+          </div>
+          
+          <div class="setting-group">
+            <label class="setting-label">ℹ️ 存储信息</label>
+            <div id="storage-info" class="storage-info">
+              <!-- 动态填充 -->
+            </div>
+          </div>
+          
+          <div class="setting-group">
+            <label class="setting-label">🧠 情感分析缓存</label>
+            <p style="font-size:12px;color:var(--text-secondary);margin:8px 0 16px">
+              资讯情感分析结果会自动缓存24小时，避免重复调用API消耗Token。<br>
+              缓存内容：利好/利空/中性判断结果
+            </p>
+            <div id="sentiment-cache-stats" class="cache-stats">
+              <!-- 动态填充统计信息 -->
+            </div>
+            <div class="data-mgmt-actions">
+              <button id="btn-clean-sentiment-cache" class="btn btn-secondary">🧹 清理过期缓存</button>
+              <button id="btn-clear-sentiment-cache" class="btn btn-danger">🗑️ 清空所有缓存</button>
+            </div>
+          </div>
+          
+          <div id="settings-status" class="settings-status"></div>
         </div>
       </div>
     </section>

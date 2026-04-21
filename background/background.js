@@ -64,12 +64,23 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // 侧边栏请求：代理 fetch（绕过 CORS）
   if (message.type === 'HOTSPOT_FETCH') {
     const { url, options = {} } = message;
+    
+    // 根据URL自动设置合适的Referer和Origin
+    const urlObj = new URL(url);
+    const defaultHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      'Accept': 'application/json, application/xml, application/rss+xml, text/xml, text/html, */*',
+    };
+    
+    // 东方财富API需要特定Referer
+    if (urlObj.hostname.includes('eastmoney')) {
+      defaultHeaders['Referer'] = 'https://quote.eastmoney.com/';
+      defaultHeaders['Origin'] = 'https://quote.eastmoney.com';
+    }
+    
     const fetchOpts = {
       method: options.method || 'GET',
-      headers: Object.assign({
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-        'Accept': 'application/json, application/xml, application/rss+xml, text/xml, text/html, */*',
-      }, options.headers || {}),
+      headers: Object.assign(defaultHeaders, options.headers || {}),
     };
     // 支持 POST body
     if (options.body) {
@@ -110,6 +121,107 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }
       })
       .catch(err => {
+        sendResponse({ error: err.message });
+      });
+    return true;
+  }
+
+  // 侧边栏请求：获取K线数据（使用腾讯股票API，更稳定）
+  if (message.type === 'FETCH_KLINE_DATA') {
+    const { secid, klt, fqt = 1, lmt = 120 } = message;
+    
+    // 转换secid格式：东方财富 1.600519 -> 腾讯 sh600519
+    const code = secid.split('.')[1];
+    const marketPrefix = secid.startsWith('1.') ? 'sh' : 'sz';
+    const tencentCode = `${marketPrefix}${code}`;
+    
+    // 转换周期：101=日K, 102=周K, 103=月K -> 腾讯: day=日, week=周, month=月
+    const kltMap = { '101': 'day', '102': 'week', '103': 'month' };
+    const tencentKlt = kltMap[klt] || 'day';
+    
+    // 根据不同周期计算合适的日期范围
+    const endDate = new Date();
+    const startDate = new Date();
+    
+    if (tencentKlt === 'day') {
+      // 日K：最近6个月（约180天）
+      startDate.setDate(startDate.getDate() - 180);
+    } else if (tencentKlt === 'week') {
+      // 周K：最近2年（约104周）
+      startDate.setFullYear(startDate.getFullYear() - 2);
+    } else if (tencentKlt === 'month') {
+      // 月K：最近5年（约60个月）
+      startDate.setFullYear(startDate.getFullYear() - 5);
+    }
+    
+    const startStr = startDate.toISOString().split('T')[0];
+    const endStr = endDate.toISOString().split('T')[0];
+    
+    console.log(`[K线代理] 周期: ${tencentKlt}, 日期范围: ${startStr} 至 ${endStr}`);
+    
+    // 腾讯K线API
+    const url = `https://web.ifzq.gtimg.cn/appstock/app/fqkline/get?param=${tencentCode},${tencentKlt},${startStr},${endStr},${lmt},qfq`;
+    
+    console.log('[K线代理] 使用腾讯API:', url);
+    
+    fetch(url, {
+      method: 'GET',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+        'Referer': 'https://stockpage.10jqka.com.cn/',
+        'Accept': 'application/json'
+      }
+    })
+      .then(async (resp) => {
+        console.log('[K线代理] HTTP状态:', resp.status);
+        if (!resp.ok) {
+          sendResponse({ error: `HTTP ${resp.status}`, status: resp.status });
+          return;
+        }
+        const text = await resp.text();
+        console.log('[K线代理] 响应长度:', text.length);
+        
+        try {
+          const data = JSON.parse(text);
+          console.log('[K线代理] 解析成功, code:', data.code, 'msg:', data.msg);
+          
+          // 腾讯API数据结构: data.data.{code}.qfqday/qfqweek/qfqmonth
+          const stockData = data?.data?.[tencentCode];
+          
+          // 根据周期选择对应的字段名
+          let klinesArray = [];
+          if (tencentKlt === 'day') {
+            klinesArray = stockData?.qfqday || stockData?.day || [];
+          } else if (tencentKlt === 'week') {
+            klinesArray = stockData?.qfqweek || stockData?.week || [];
+          } else if (tencentKlt === 'month') {
+            klinesArray = stockData?.qfqmonth || stockData?.month || [];
+          }
+          
+          console.log('[K线代理] K线条数:', klinesArray.length);
+          if (klinesArray.length > 0) {
+            console.log('[K线代理] 第一条K线:', klinesArray[0]);
+          }
+          
+          // 转换为统一格式
+          const result = {
+            data: {
+              klines: klinesArray.map(k => {
+                // 腾讯格式: [日期, 开盘, 收盘, 最高, 最低, 成交量]
+                // 转换为逗号分隔字符串
+                return k.join(',');
+              })
+            }
+          };
+          
+          sendResponse({ data: result, format: 'json' });
+        } catch (e) {
+          console.error('[K线代理] JSON解析失败:', e);
+          sendResponse({ error: 'JSON解析失败: ' + e.message });
+        }
+      })
+      .catch(err => {
+        console.error('[K线代理] 请求失败:', err);
         sendResponse({ error: err.message });
       });
     return true;
