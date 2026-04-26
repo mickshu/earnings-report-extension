@@ -509,6 +509,8 @@
           <nav class="sa-info-tabs">
             <button class="sa-info-tab active" data-infotab="metrics">📊 关键指标</button>
             <button class="sa-info-tab" data-infotab="kline">📈 K线图</button>
+            <button class="sa-info-tab" data-infotab="mgmt">👥 管理层</button>
+            <button class="sa-info-tab" data-infotab="north">💰 资金流向</button>
           </nav>
 
           <!-- 关键指标子面板 -->
@@ -547,6 +549,20 @@
             </div>
           </div>
 
+          <!-- 管理层子面板 -->
+          <div id="sa-info-mgmt-panel" class="sa-info-sub-panel">
+            <div id="sa-mgmt-table-wrap" class="sa-mgmt-table-wrap">
+              <div class="sa-mgmt-placeholder">👥 选择股票后加载管理层信息</div>
+            </div>
+          </div>
+
+          <!-- 资金流向子面板 -->
+          <div id="sa-info-north-panel" class="sa-info-sub-panel">
+            <div id="sa-north-container" class="sa-kline-container">
+              <div class="sa-kline-placeholder">💰 选择股票后加载资金流向图</div>
+            </div>
+          </div>
+
           <button id="btn-sa-start" class="btn btn-primary" style="width:100%;margin-top:10px">🚀 开始投资分析</button>
         </div>
 
@@ -565,6 +581,8 @@
             <nav class="sa-info-tabs">
               <button class="sa-info-tab active" data-infotab="metrics">📊 关键指标</button>
               <button class="sa-info-tab" data-infotab="kline">📈 K线图</button>
+              <button class="sa-info-tab" data-infotab="mgmt">👥 管理层</button>
+              <button class="sa-info-tab" data-infotab="north">💰 资金流向</button>
             </nav>
             <div id="sa-collapse-metrics" class="sa-info-sub-panel active">
               <div class="val-stock-metrics">
@@ -595,6 +613,15 @@
                 </select>
               </div>
               <div id="sa-collapse-kline-container" class="sa-kline-container">
+              </div>
+            </div>
+            <div id="sa-collapse-mgmt" class="sa-info-sub-panel">
+              <div id="sa-collapse-mgmt-table-wrap" class="sa-mgmt-table-wrap">
+                <div class="sa-mgmt-placeholder">👥 选择股票后加载管理层信息</div>
+              </div>
+            </div>
+            <div id="sa-collapse-north" class="sa-info-sub-panel">
+              <div id="sa-collapse-north-container" class="sa-kline-container">
               </div>
             </div>
           </div>

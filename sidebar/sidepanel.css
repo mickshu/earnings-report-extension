@@ -3189,3 +3189,121 @@ body {
 .btn-danger:hover {
   background: #c62828;
 }
+
+/* ===== 管理层子面板 ===== */
+.sa-mgmt-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text-hint);
+  font-size: 14px;
+}
+
+.sa-mgmt-table-wrap {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.sa-mgmt-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.sa-mgmt-table th {
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-align: left;
+  padding: 8px 6px;
+  border-bottom: 2px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.sa-mgmt-table td {
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  line-height: 1.4;
+  vertical-align: top;
+}
+
+.sa-mgmt-table tr:last-child td {
+  border-bottom: none;
+}
+
+.sa-mgmt-table tr:hover td {
+  background: var(--surface-hover);
+}
+
+.sa-mgmt-table .sa-mgmt-core td {
+  background: var(--primary-light);
+  font-weight: 500;
+}
+
+.sa-mgmt-table .sa-mgmt-name {
+  white-space: nowrap;
+  font-weight: 500;
+  color: var(--primary);
+}
+
+.sa-mgmt-table .sa-mgmt-position {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* AI补充区域 */
+.sa-mgmt-enrich-area {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.sa-mgmt-enrich-btn {
+  width: 100%;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.sa-mgmt-enrich-result {
+  margin-top: 10px;
+}
+
+/* AI补充背景卡片 */
+.sa-mgmt-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.sa-mgmt-card:last-child {
+  margin-bottom: 0;
+}
+
+.sa-mgmt-card-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.sa-mgmt-card-field {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.sa-mgmt-card-field strong {
+  color: var(--text);
+  font-weight: 500;
+}

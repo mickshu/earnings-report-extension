@@ -1706,6 +1706,14 @@ function bindEvents() {
       if (tab.dataset.infotab === 'kline' && state.saStock) {
         loadKlineChart(tab.closest('.sa-stock-card') ? 'main' : 'collapsed');
       }
+      // 切到管理层时渲染
+      if (tab.dataset.infotab === 'mgmt' && state.saStock && state.saFundamentals?._mgmtData) {
+        renderMgmtTable(tab.closest('.sa-stock-card') ? 'main' : 'collapsed');
+      }
+      // 切到资金流向时渲染
+      if (tab.dataset.infotab === 'north' && state.saStock && state.saFundamentals?._northData) {
+        loadNorthChart(tab.closest('.sa-stock-card') ? 'main' : 'collapsed');
+      }
     });
   });
 
@@ -6270,31 +6278,54 @@ async function fetchSAFundamentals(tsCode, secid) {
       }
     } catch (e) { console.log('融资融券接口失败:', e); }
 
-    // 9. 获取北向资金数据（最近60个交易日）
+    // 9. 获取主力资金流向数据（最近60个交易日）
     try {
-      const northUrl = `https://push2his.eastmoney.com/api/qt/stock.hk2shen/get?secid=${secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57,f58&lmt=60`;
-      const northResp = await fetch(northUrl);
-      const northResult = await northResp.json();
-      if (northResult?.data?.klines) {
-        state.saFundamentals._northData = northResult.data.klines.map(line => {
+      const fflowUrl = `https://push2his.eastmoney.com/api/qt/stock/fflow/kline/get?secid=${secid}&fields1=f1,f2,f3,f4,f5,f6&fields2=f51,f52,f53,f54,f55,f56,f57&klt=101&lmt=60`;
+      const fflowResult = await new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage({ type: 'HOTSPOT_FETCH', url: fflowUrl }, (resp) => {
+          if (chrome.runtime.lastError) { reject(new Error(chrome.runtime.lastError.message)); return; }
+          if (!resp || resp.error) { reject(new Error(resp?.error || '请求失败')); return; }
+          resolve(resp.data);
+        });
+      });
+      if (fflowResult?.data?.klines) {
+        state.saFundamentals._northData = fflowResult.data.klines.map(line => {
           const parts = line.split(',');
           return {
             date: parts[0],
-            holdShares: parseFloat(parts[1]) || 0,
-            holdRatio: parseFloat(parts[2]) || 0,
-            holdAmount: parseFloat(parts[3]) || 0,
-            changeShares: parseFloat(parts[4]) || 0,
-            netBuy: parseFloat(parts[5]) || 0
+            mainNet: parseFloat(parts[1]) || 0,       // 主力净流入(元)
+            smallNet: parseFloat(parts[2]) || 0,       // 小单净流入(元)
+            midNet: parseFloat(parts[3]) || 0,         // 中单净流入(元)
+            superNet: parseFloat(parts[4]) || 0,       // 超大单净流入(元)
+            bigNet: parseFloat(parts[5]) || 0          // 大单净流入(元)
           };
-        }).filter(d => d.holdShares > 0);
-        console.log(`[北向资金] 获取到 ${state.saFundamentals._northData.length} 条数据`);
+        });
+        console.log(`[资金流向] 获取到 ${state.saFundamentals._northData.length} 条数据`);
       }
-    } catch (e) { console.log('北向资金接口失败:', e); }
+    } catch (e) { console.log('资金流向接口失败:', e); }
+
+    // 10. 获取管理层/高管数据
+    try {
+      const marketPrefix = tsCode.endsWith('.SZ') ? 'SZ' : 'SH';
+      const mgmtUrl = `https://emweb.securities.eastmoney.com/PC_HSF10/CompanyManagement/PageAjax?code=${marketPrefix}${code6}`;
+      const mgmtResp = await fetch(mgmtUrl);
+      const mgmtResult = await mgmtResp.json();
+      if (mgmtResult?.gglb?.length) {
+        state.saFundamentals._mgmtData = mgmtResult.gglb;
+        console.log(`[管理层] 获取到 ${mgmtResult.gglb.length} 位高管数据`);
+      }
+    } catch (e) { console.log('管理层接口失败:', e); }
 
     // 如果当前K线图Tab处于激活状态，自动加载K线图
     const activeKlineTab = document.querySelector('.sa-stock-card .sa-info-tab[data-infotab="kline"].active');
     if (activeKlineTab) {
       loadKlineChart('main');
+    }
+
+    // 如果当前资金流向Tab处于激活状态，自动加载资金流向图
+    const activeNorthTab = document.querySelector('.sa-stock-card .sa-info-tab[data-infotab="north"].active');
+    if (activeNorthTab) {
+      loadNorthChart('main');
     }
 
   } catch (e) {
@@ -6341,7 +6372,7 @@ async function runStockAnalysis() {
 
     // 调用 LLM
     $('#sa-loading-text').textContent = '正在进行投资分析...';
-    const userPrompt = `请对以下股票数据进行全方位投资分析：\n---\n${analysisText}\n---\n请严格按照投资公司分析框架的6大维度输出报告，尤其关注估值分析和投资策略建议。`;
+    const userPrompt = `请对以下股票数据进行全方位投资分析：\n---\n${analysisText}\n---\n请严格按照投资公司分析框架的6大维度输出报告，尤其关注估值分析和投资策略建议。${state.saFundamentals?._mgmtData?.length ? '\n\n请特别关注管理层稳定性风险，结合管理层变动频率、关键人依赖度、利益一致性和背景匹配度给出综合评估，并给出风险等级（高/中/低）。' : ''}`;
     const result = await callLLM(STOCK_ANALYSIS_SYSTEM_PROMPT, userPrompt, true, 'stock-analysis');
 
     if (result) {
@@ -6663,6 +6694,127 @@ function buildStockAnalysisText() {
   }
 
 
+  // 管理层概况与稳定性分析
+  if (f._mgmtData && f._mgmtData.length > 0) {
+    text += `## 管理层概况与稳定性分析\n\n`;
+
+    // 核心管理层列表
+    text += `### 核心管理层列表\n`;
+    text += `| 姓名 | 职务 | 年龄 | 学历 | 任职起始 | 持股数 | 任期(年) |\n`;
+    text += `|------|------|------|------|----------|--------|---------|\n`;;
+
+    const coreKeywords = ['董事长', '总经理', 'CEO', '总裁', '副董事长', '副总经理'];
+    const isCore = (pos) => coreKeywords.some(k => pos && pos.includes(k));
+    // 解析INCUMBENT_TIME获取起始日期："2025-11-28至今" → "2025-11-28"
+    const getStartDate = (it) => it ? it.split('至')[0].trim() : null;
+
+    f._mgmtData.forEach(p => {
+      const name = p.PERSON_NAME || '--';
+      const position = p.POSITION || '--';
+      const age = p.AGE != null ? p.AGE : '--';
+      const edu = p.HIGH_DEGREE || '--';
+      const startDate = getStartDate(p.INCUMBENT_TIME) || '--';
+      const holdNum = p.HOLD_NUM != null ? (p.HOLD_NUM >= 10000 ? (p.HOLD_NUM / 10000).toFixed(2) + '万' : p.HOLD_NUM.toLocaleString()) : '--';
+
+      // 计算任期
+      let tenure = '--';
+      const startStr = getStartDate(p.INCUMBENT_TIME);
+      if (startStr) {
+        const start = new Date(startStr);
+        const now = new Date();
+        const years = ((now - start) / (365.25 * 24 * 60 * 60 * 1000)).toFixed(1);
+        tenure = years + '年';
+      }
+
+      text += `| ${name} | ${position} | ${age} | ${edu} | ${startDate} | ${holdNum} | ${tenure} |\n`;
+    });
+    text += `\n`;
+
+    // 管理层稳定性指标计算
+    text += `### 管理层稳定性指标\n`;
+
+    // 1. 核心管理者平均任期
+    const coreManagers = f._mgmtData.filter(p => isCore(p.POSITION));
+    if (coreManagers.length > 0) {
+      const tenures = coreManagers.map(p => {
+        const startStr = getStartDate(p.INCUMBENT_TIME);
+        if (!startStr) return null;
+        return (Date.now() - new Date(startStr).getTime()) / (365.25 * 24 * 60 * 60 * 1000);
+      }).filter(t => t != null);
+
+      if (tenures.length > 0) {
+        const avgTenure = (tenures.reduce((a, b) => a + b, 0) / tenures.length).toFixed(1);
+        text += `- **核心管理层平均任期**: ${avgTenure}年\n`;
+      }
+    }
+
+    // 2. 近3年变动人数
+    const threeYearsAgo = new Date();
+    threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+    const recentAppointments = f._mgmtData.filter(p => {
+      const startStr = getStartDate(p.INCUMBENT_TIME);
+      if (!startStr) return false;
+      return new Date(startStr) >= threeYearsAgo;
+    });
+    text += `- **近3年新任命人数**: ${recentAppointments.length}人\n`;
+
+    // 3. 年龄分布
+    const ages = f._mgmtData.map(p => p.AGE).filter(a => a != null);
+    if (ages.length > 0) {
+      const minAge = Math.min(...ages);
+      const maxAge = Math.max(...ages);
+      const avgAge = (ages.reduce((a, b) => a + b, 0) / ages.length).toFixed(0);
+      text += `- **年龄分布**: ${minAge}-${maxAge}岁，平均${avgAge}岁\n`;
+    }
+
+    // 4. 实控人在管理层（新API无此字段，跳过）
+    // 此字段在新API中不可用，从RESUME中可能推断
+
+    // 5. 管理层持股
+    const totalHold = f._mgmtData.reduce((sum, p) => sum + (p.HOLD_NUM || 0), 0);
+    if (totalHold > 0) {
+      text += `- **管理层合计持股**: ${totalHold >= 10000 ? (totalHold / 10000).toFixed(2) + '万股' : totalHold.toLocaleString() + '股'}\n`;
+    }
+
+    // 6. 学历构成
+    const eduMap = {};
+    f._mgmtData.forEach(p => {
+      const e = p.HIGH_DEGREE || '未知';
+      eduMap[e] = (eduMap[e] || 0) + 1;
+    });
+    const highEdu = (eduMap['博士'] || 0) + (eduMap['硕士'] || 0);
+    const totalEdu = Object.values(eduMap).reduce((a, b) => a + b, 0);
+    text += `- **学历构成**: ${Object.entries(eduMap).map(([k, v]) => k + v + '人').join('、')}\n`;
+    if (totalEdu > 0) {
+      text += `- **硕博占比**: ${(highEdu / totalEdu * 100).toFixed(0)}%\n`;
+    }
+
+    // 7. 附上核心管理者简历摘要
+    if (coreManagers.length > 0) {
+      text += `\n### 核心管理者简历摘要\n`;
+      text += `（请特别关注每位管理者的毕业院校，包括本科、硕士、博士阶段）\n`;
+      coreManagers.forEach(p => {
+        const name = p.PERSON_NAME || '--';
+        const position = p.POSITION || '--';
+        const resume = p.RESUME || '暂无公开简历';
+        text += `- **${name}**（${position}，${p.HIGH_DEGREE || '学历未知'}）：${resume}\n`;
+      });
+    }
+
+    text += `\n`;
+
+    // 稳定性风险评估提示
+    text += `### 管理层稳定性风险提示\n`;
+    text += `请基于以上数据，从以下维度评估管理层稳定性风险：\n`;
+    text += `1. **变动频率与业务连续性**：核心管理层变动是否频繁，是否影响业务连续性\n`;
+    text += `2. **关键人风险**：是否过度依赖某位核心管理者（如创始人兼董事长兼总经理）\n`;
+    text += `3. **利益一致性**：管理层持股情况，利益是否与中小股东一致\n`;
+    text += `4. **背景与战略匹配度**：管理层学历、毕业院校和经验是否与公司发展战略匹配\n`;
+    text += `5. **综合风险等级**：请给出高/中/低的风险评估，并说明理由\n`;
+    text += `\n`;
+  }
+
+
   // 融资融券分析
   if (f._marginData && f._marginData.length > 0) {
     text += `## 融资融券分析\n`;
@@ -6690,26 +6842,25 @@ function buildStockAnalysisText() {
     }
   }
 
-  // 北向资金分析  
+  // 主力资金流向分析
   if (f._northData && f._northData.length > 0) {
-    text += `## 北向资金（外资）分析\n`;
+    text += `## 主力资金流向分析\n`;
     const latest = f._northData[f._northData.length - 1];
-    text += `### 北向资金持股走势\n`;
-    text += `- **最新持股数**(${latest.date}): ${(latest.holdShares / 10000).toFixed(2)}亿股\n`;
-    text += `- **持股比例**: ${latest.holdRatio.toFixed(2)}%\n`;
-    text += `- **持股市值**: ${(latest.holdAmount / 10000).toFixed(2)}亿元\n`;
+    const todayMainYi = (latest.mainNet / 100000000).toFixed(2);
+    text += `### 最新资金流向\n`;
+    text += `- **今日主力净流入**(${latest.date}): ${todayMainYi}亿元 (${latest.mainNet > 0 ? '🔴 净流入' : latest.mainNet < 0 ? '🟢 净流出' : '持平'})\n`;
     text += `\n`;
     const last5 = f._northData.slice(-5);
     if (last5.length >= 2) {
-      const netBuy5d = last5.reduce((sum, d) => sum + d.netBuy, 0);
+      const mainNet5d = last5.reduce((sum, d) => sum + d.mainNet, 0);
       text += `### 近期资金流向\n`;
-      text += `- **近5日净流入**: ${(netBuy5d / 10000).toFixed(2)}亿元 (${netBuy5d > 0 ? '🔴 净流入' : netBuy5d < 0 ? '🟢 净流出' : '持平'})\n`;
+      text += `- **近5日主力净流入**: ${(mainNet5d / 100000000).toFixed(2)}亿元 (${mainNet5d > 0 ? '🔴 净流入' : mainNet5d < 0 ? '🟢 净流出' : '持平'})\n`;
       text += `\n`;
     }
-    const netBuy30d = f._northData.slice(-30).reduce((sum, d) => sum + d.netBuy, 0);
-    text += `### 外资态度总结\n`;
-    text += `- **近30日净流向**: ${(netBuy30d / 10000).toFixed(2)}亿元\n`;
-    text += `- **外资立场**: ${netBuy30d > 0 ? '🔴 外资整体看好' : netBuy30d < 0 ? '🟢 外资整体看空' : '外资态度中性'}\n`;
+    const mainNet30d = f._northData.slice(-30).reduce((sum, d) => sum + d.mainNet, 0);
+    text += `### 主力态度总结\n`;
+    text += `- **近30日主力净流向**: ${(mainNet30d / 100000000).toFixed(2)}亿元\n`;
+    text += `- **主力立场**: ${mainNet30d > 0 ? '🔴 主力整体看好' : mainNet30d < 0 ? '🟢 主力整体看空' : '主力态度中性'}\n`;
     text += `\n`;
   }
 
@@ -6729,10 +6880,11 @@ function buildStockAnalysisText() {
       }
     }
     if (f._northData && f._northData.length > 0) {
-      const netBuy5d = f._northData.slice(-5).reduce((sum, d) => sum + d.netBuy, 0);
-      const signal = netBuy5d > 0 ? '看多' : netBuy5d < 0 ? '看空' : '中性';
-      text += `| 北向资金 | ${netBuy5d > 0 ? '净流入' : '净流出'} | ${signal} | ${Math.abs(netBuy5d)/f._northData.slice(-5)[0].holdAmount > 0.005 ? '⭐⭐' : '⭐'} |\n`;
-      if (netBuy5d > 0) bullish++; else if (netBuy5d < 0) bearish++;
+      const mainNet5d = f._northData.slice(-5).reduce((sum, d) => sum + d.mainNet, 0);
+      const signal = mainNet5d > 0 ? '看多' : mainNet5d < 0 ? '看空' : '中性';
+      const mainNetAbsYi = Math.abs(mainNet5d / 100000000).toFixed(2);
+      text += `| 主力资金 | ${mainNet5d > 0 ? '净流入' : '净流出'} ${mainNetAbsYi}亿 | ${signal} | ${Math.abs(mainNet5d) > 500000000 ? '⭐⭐' : '⭐'} |\n`;
+      if (mainNet5d > 0) bullish++; else if (mainNet5d < 0) bearish++;
     }
     text += `\n### 综合多空判断\n`;
     if (bullish > bearish) {
@@ -7023,6 +7175,400 @@ function renderKlineCanvas(container, klines, stockName) {
   ctx.fillText('MA5', padding.left + 200, 18);
   ctx.fillStyle = '#1a73e8';
   ctx.fillText('MA20', padding.left + 240, 18);
+}
+
+/**
+ * 渲染管理层表格
+ * @param {string} mode - 'main' 主卡 | 'collapsed' 折叠卡
+ */
+function renderMgmtTable(mode) {
+  const wrapId = mode === 'main' ? 'sa-mgmt-table-wrap' : 'sa-collapse-mgmt-table-wrap';
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+
+  const mgmtData = state.saFundamentals?._mgmtData;
+  if (!mgmtData || mgmtData.length === 0) {
+    wrap.innerHTML = '<div class="sa-mgmt-placeholder">暂无管理层数据</div>';
+    return;
+  }
+
+  // 筛选核心管理者（董事长、总经理、CEO、总裁、副总经理等）
+  const coreKeywords = ['董事长', '总经理', 'CEO', '总裁', '副董事长', '副总经理'];
+  const isCore = (pos) => coreKeywords.some(k => pos && pos.includes(k));
+
+  let html = '<table class="sa-mgmt-table">';
+  html += '<thead><tr><th>姓名</th><th>职务</th><th>年龄</th><th>学历</th><th>任职日期</th><th>持股</th></tr></thead>';
+  html += '<tbody>';
+
+  mgmtData.forEach(p => {
+    const name = p.PERSON_NAME || '--';
+    const position = p.POSITION || '--';
+    const age = p.AGE != null ? p.AGE : '--';
+    const edu = p.HIGH_DEGREE || '--';
+    // INCUMBENT_TIME格式："2025-11-28至今"，取起始日期
+    const startDate = p.INCUMBENT_TIME ? p.INCUMBENT_TIME.split('至')[0] : '--';
+    const holdNum = p.HOLD_NUM != null ? (p.HOLD_NUM >= 10000 ? (p.HOLD_NUM / 10000).toFixed(2) + '万' : p.HOLD_NUM.toLocaleString()) : '--';
+    const coreClass = isCore(position) ? ' sa-mgmt-core' : '';
+    html += `<tr class="${coreClass}">`;
+    html += `<td class="sa-mgmt-name">${name}</td>`;
+    html += `<td class="sa-mgmt-position">${position}</td>`;
+    html += `<td>${age}</td>`;
+    html += `<td>${edu}</td>`;
+    html += `<td>${startDate}</td>`;
+    html += `<td>${holdNum}</td>`;
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+
+  // AI补充背景按钮
+  html += '<div class="sa-mgmt-enrich-area">';
+  html += '<button class="btn btn-secondary sa-mgmt-enrich-btn" data-mode="' + mode + '">✨ AI补充核心管理者背景</button>';
+  html += '<div class="sa-mgmt-enrich-result"></div>';
+  html += '</div>';
+
+  wrap.innerHTML = html;
+
+  // 绑定AI补充按钮事件
+  const btn = wrap.querySelector('.sa-mgmt-enrich-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const coreManagers = mgmtData.filter(p => isCore(p.POSITION)).slice(0, 5);
+      if (coreManagers.length === 0) {
+        btn.textContent = '未识别到核心管理者';
+        btn.disabled = true;
+        return;
+      }
+      enrichMgmtBackground(coreManagers, mode);
+    });
+  }
+}
+
+/**
+ * AI补充核心管理者背景信息
+ * @param {Array} mgmtList - 核心管理者列表
+ * @param {string} mode - 'main' | 'collapsed'
+ */
+async function enrichMgmtBackground(mgmtList, mode) {
+  const wrapId = mode === 'main' ? 'sa-mgmt-table-wrap' : 'sa-collapse-mgmt-table-wrap';
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+
+  const btn = wrap.querySelector('.sa-mgmt-enrich-btn');
+  const resultArea = wrap.querySelector('.sa-mgmt-enrich-result');
+  if (!btn || !resultArea) return;
+
+  if (!getActiveLLMService()?.apiKey) {
+    showSettings();
+    showToast('请先配置 LLM API Key');
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '正在补充背景...';
+
+  const stockName = state.saStock?.name || '';
+  const managerInfo = mgmtList.map(p => {
+    const startDate = p.INCUMBENT_TIME ? p.INCUMBENT_TIME.split('至')[0] : '未知';
+    const resume = p.RESUME ? `，简历：${p.RESUME}` : '';
+    return `- ${p.PERSON_NAME}（${p.POSITION}，年龄${p.AGE || '未知'}，学历${p.HIGH_DEGREE || '未知'}，任职起始${startDate}${resume}）`;
+  }).join('\n');
+
+  const prompt = `请根据以下${stockName}公司核心管理者信息，补充每位管理者的背景介绍。
+要求：
+1. 仅补充有公开信息可查的内容，无法确认的标注"暂无公开信息"
+2. 每位管理者包含：毕业院校（分别列出本科、硕士、博士院校，如未知则标注"未知"）、主要工作经历（曾任职务/公司）、行业地位和影响力
+3. 严格按以下JSON数组格式输出，不要输出其他内容：
+[{"name":"姓名","bachelorSchool":"本科院校","masterSchool":"硕士院校","phdSchool":"博士院校","experience":"工作经历","industryPosition":"行业地位"}]
+
+核心管理者：
+${managerInfo}`;
+
+  try {
+    const result = await callLLM('你是一位专业的财经分析师，熟悉中国上市公司管理层背景。请准确、客观地提供信息。', prompt, false, 'mgmt-enrich');
+
+    if (result) {
+      // 尝试解析JSON
+      let parsed = null;
+      try {
+        const jsonMatch = result.match(/\[[\s\S]*\]/);
+        if (jsonMatch) parsed = JSON.parse(jsonMatch[0]);
+      } catch (e) {
+        console.log('管理层背景JSON解析失败:', e);
+      }
+
+      let cardsHtml = '';
+      if (parsed && Array.isArray(parsed)) {
+        parsed.forEach(p => {
+          cardsHtml += `<div class="sa-mgmt-card">`;
+          cardsHtml += `<div class="sa-mgmt-card-name">${p.name || '--'}</div>`;
+          // 毕业院校
+          const schools = [];
+          if (p.bachelorSchool && p.bachelorSchool !== '未知') schools.push('本科：' + p.bachelorSchool);
+          if (p.masterSchool && p.masterSchool !== '未知') schools.push('硕士：' + p.masterSchool);
+          if (p.phdSchool && p.phdSchool !== '未知') schools.push('博士：' + p.phdSchool);
+          if (schools.length > 0) {
+            cardsHtml += `<div class="sa-mgmt-card-field"><strong>毕业院校：</strong>${schools.join(' | ')}</div>`;
+          }
+          cardsHtml += `<div class="sa-mgmt-card-field"><strong>工作经历：</strong>${p.experience || '暂无公开信息'}</div>`;
+          cardsHtml += `<div class="sa-mgmt-card-field"><strong>行业地位：</strong>${p.industryPosition || '暂无公开信息'}</div>`;
+          cardsHtml += `</div>`;
+        });
+      } else {
+        // JSON解析失败，直接展示文本
+        cardsHtml = `<div class="sa-mgmt-card"><div class="sa-mgmt-card-field">${result.replace(/\n/g, '<br>')}</div></div>`;
+      }
+
+      resultArea.innerHTML = cardsHtml;
+      btn.textContent = '✨ 重新补充';
+      btn.disabled = false;
+    } else {
+      resultArea.innerHTML = '<div class="sa-mgmt-card"><div class="sa-mgmt-card-field">补充失败，请重试</div></div>';
+      btn.textContent = '✨ 重试';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    console.error('管理层背景补充失败:', e);
+    resultArea.innerHTML = '<div class="sa-mgmt-card"><div class="sa-mgmt-card-field">补充失败：' + e.message + '</div></div>';
+    btn.textContent = '✨ 重试';
+    btn.disabled = false;
+  }
+}
+
+/**
+ * 加载资金流向趋势图
+ * @param {string} mode - 'main' 主信息卡, 'collapsed' 折叠信息卡
+ */
+function loadNorthChart(mode) {
+  if (!state.saStock) return;
+  const data = state.saFundamentals?._northData;
+  let container;
+  if (mode === 'main') {
+    container = document.getElementById('sa-north-container');
+  } else {
+    container = document.getElementById('sa-collapse-north-container');
+  }
+  if (!container) return;
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="sa-kline-placeholder">该股暂无资金流向数据</div>';
+    return;
+  }
+
+  renderNorthCanvas(container, data, state.saStock.name);
+}
+
+/**
+ * Canvas绘制主力资金流向趋势图（主力净流入柱状图 + 累计净流入折线）
+ * @param {HTMLElement} container - 容器元素
+ * @param {Array} data - 资金流向数据数组 [{date, mainNet, smallNet, midNet, superNet, bigNet}]
+ * @param {string} stockName - 股票名称
+ */
+function renderNorthCanvas(container, data, stockName) {
+  const width = container.clientWidth || 400;
+  const height = 300;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width * 2;
+  canvas.height = height * 2;
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+
+  container.innerHTML = '';
+  container.appendChild(canvas);
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+
+  // 布局参数
+  const padding = { top: 45, right: 55, bottom: 25, left: 10 };
+  const drawWidth = width - padding.left - padding.right;
+  const totalDrawHeight = height - padding.top - padding.bottom;
+  const lineAreaHeight = totalDrawHeight * 0.40;
+  const barAreaHeight = totalDrawHeight * 0.45;
+  const gapHeight = totalDrawHeight * 0.15;
+
+  const lineAreaTop = padding.top;
+  const barAreaTop = padding.top + lineAreaHeight + gapHeight;
+
+  // 背景
+  ctx.fillStyle = '#fafbfc';
+  ctx.fillRect(0, 0, width, height);
+
+  // ========== 标题 & 统计 ==========
+  ctx.fillStyle = '#202124';
+  ctx.font = 'bold 12px -apple-system, sans-serif';
+  ctx.fillText(`${stockName} 主力资金流向`, padding.left, 16);
+
+  // 统计数据
+  const latest = data[data.length - 1];
+  const last5 = data.slice(-5);
+  const mainNet5d = last5.reduce((sum, d) => sum + d.mainNet, 0);
+  const mainNet5dYi = (mainNet5d / 100000000).toFixed(2);
+  const todayMainYi = (latest.mainNet / 100000000).toFixed(2);
+
+  ctx.font = '10px -apple-system, sans-serif';
+  ctx.fillStyle = latest.mainNet >= 0 ? '#e53935' : '#34a853';
+  ctx.fillText(`今日: ${latest.mainNet >= 0 ? '+' : ''}${todayMainYi}亿`, padding.left, 30);
+
+  ctx.fillStyle = mainNet5d >= 0 ? '#e53935' : '#34a853';
+  ctx.fillText(`近5日: ${mainNet5d >= 0 ? '+' : ''}${mainNet5dYi}亿`, padding.left + 95, 30);
+
+  const mainNetTotal = data.reduce((sum, d) => sum + d.mainNet, 0);
+  const mainNetTotalYi = (mainNetTotal / 100000000).toFixed(2);
+  ctx.fillStyle = mainNetTotal >= 0 ? '#e53935' : '#34a853';
+  ctx.fillText(`${data.length}日累计: ${mainNetTotal >= 0 ? '+' : ''}${mainNetTotalYi}亿`, padding.left + 195, 30);
+
+  // ========== 上半区：累计主力净流入折线 ==========
+  const cumValues = [];
+  let cumSum = 0;
+  for (const d of data) {
+    cumSum += d.mainNet;
+    cumValues.push(cumSum / 100000000); // 转亿元
+  }
+  const maxCum = Math.max(...cumValues);
+  const minCum = Math.min(...cumValues);
+  const cumRange = maxCum - minCum || 1;
+
+  // 区域标签
+  ctx.fillStyle = '#9aa0a6';
+  ctx.font = '9px -apple-system, sans-serif';
+  ctx.fillText('累计净流入(亿)', padding.left, lineAreaTop - 2);
+
+  // 网格线
+  ctx.strokeStyle = '#f0f0f0';
+  ctx.lineWidth = 0.5;
+  const cumSteps = 3;
+  for (let i = 0; i <= cumSteps; i++) {
+    const y = lineAreaTop + (lineAreaHeight / cumSteps) * i;
+    const val = maxCum - (cumRange / cumSteps) * i;
+    ctx.beginPath();
+    ctx.moveTo(padding.left, y);
+    ctx.lineTo(width - padding.right, y);
+    ctx.stroke();
+    ctx.fillStyle = '#9aa0a6';
+    ctx.font = '9px monospace';
+    ctx.fillText(val.toFixed(1), width - padding.right + 4, y + 3);
+  }
+
+  // 绘制折线
+  ctx.strokeStyle = '#1a73e8';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let i = 0; i < data.length; i++) {
+    const x = padding.left + (drawWidth / (data.length - 1 || 1)) * i;
+    const y = lineAreaTop + lineAreaHeight - ((cumValues[i] - minCum) / cumRange) * lineAreaHeight;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.stroke();
+
+  // 折线填充
+  const lastX = padding.left + drawWidth;
+  ctx.lineTo(lastX, lineAreaTop + lineAreaHeight);
+  ctx.lineTo(padding.left, lineAreaTop + lineAreaHeight);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(26, 115, 232, 0.08)';
+  ctx.fill();
+
+  // ========== 下半区：每日主力净流入柱状图 ==========
+  const mainNets = data.map(d => d.mainNet / 100000000); // 转亿元
+  const maxNet = Math.max(...mainNets, 0);
+  const minNet = Math.min(...mainNets, 0);
+  const netRange = maxNet - minNet || 1;
+
+  // 区域标签
+  ctx.fillStyle = '#9aa0a6';
+  ctx.font = '9px -apple-system, sans-serif';
+  ctx.fillText('每日主力净流入(亿)', padding.left, barAreaTop - 2);
+
+  // 零线位置
+  const zeroY = barAreaTop + (maxNet / netRange) * barAreaHeight;
+
+  // 上刻度
+  ctx.strokeStyle = '#f0f0f0';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, barAreaTop);
+  ctx.lineTo(width - padding.right, barAreaTop);
+  ctx.stroke();
+  ctx.fillStyle = '#9aa0a6';
+  ctx.font = '9px monospace';
+  if (maxNet > 0) ctx.fillText(maxNet.toFixed(1), width - padding.right + 4, barAreaTop + 3);
+
+  // 零线
+  ctx.strokeStyle = '#dadce0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, zeroY);
+  ctx.lineTo(width - padding.right, zeroY);
+  ctx.stroke();
+  ctx.fillStyle = '#9aa0a6';
+  ctx.font = '9px monospace';
+  ctx.fillText('0', width - padding.right + 4, zeroY + 3);
+
+  // 下刻度
+  ctx.strokeStyle = '#f0f0f0';
+  ctx.lineWidth = 0.5;
+  ctx.beginPath();
+  ctx.moveTo(padding.left, barAreaTop + barAreaHeight);
+  ctx.lineTo(width - padding.right, barAreaTop + barAreaHeight);
+  ctx.stroke();
+  ctx.fillStyle = '#9aa0a6';
+  if (minNet < 0) ctx.fillText(minNet.toFixed(1), width - padding.right + 4, barAreaTop + barAreaHeight + 3);
+
+  // 柱状图
+  const barGap = drawWidth / data.length;
+  const barWidth = Math.max(2, barGap * 0.7);
+  for (let i = 0; i < data.length; i++) {
+    const x = padding.left + barGap * i + (barGap - barWidth) / 2;
+    const val = mainNets[i];
+    const barH = Math.abs(val / netRange) * barAreaHeight;
+
+    if (val >= 0) {
+      ctx.fillStyle = 'rgba(229, 57, 53, 0.75)';
+      ctx.fillRect(x, zeroY - barH, barWidth, Math.max(barH, 0.5));
+    } else {
+      ctx.fillStyle = 'rgba(52, 168, 83, 0.75)';
+      ctx.fillRect(x, zeroY, barWidth, Math.max(barH, 0.5));
+    }
+  }
+
+  // ========== X轴日期标签 ==========
+  ctx.fillStyle = '#9aa0a6';
+  ctx.font = '9px -apple-system, sans-serif';
+  const dateY = height - 5;
+  const dateIndices = [0, Math.floor(data.length / 3), Math.floor(data.length * 2 / 3), data.length - 1];
+  dateIndices.forEach(idx => {
+    if (idx >= data.length) return;
+    const x = padding.left + (drawWidth / (data.length - 1 || 1)) * idx;
+    const dateStr = data[idx].date.substring(2);
+    ctx.fillText(dateStr, x - 15, dateY);
+  });
+
+  // ========== 图例 ==========
+  const legendY = 16;
+  const legendX = width - padding.right - 110;
+  ctx.font = '9px -apple-system, sans-serif';
+
+  ctx.strokeStyle = '#1a73e8';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(legendX, legendY - 3);
+  ctx.lineTo(legendX + 12, legendY - 3);
+  ctx.stroke();
+  ctx.fillStyle = '#5f6368';
+  ctx.fillText('累计净流入', legendX + 15, legendY);
+
+  ctx.fillStyle = 'rgba(229, 57, 53, 0.75)';
+  ctx.fillRect(legendX, legendY + 6, 8, 8);
+  ctx.fillStyle = '#5f6368';
+  ctx.fillText('流入', legendX + 12, legendY + 13);
+
+  ctx.fillStyle = 'rgba(52, 168, 83, 0.75)';
+  ctx.fillRect(legendX + 40, legendY + 6, 8, 8);
+  ctx.fillStyle = '#5f6368';
+  ctx.fillText('流出', legendX + 52, legendY + 13);
 }
 
 /**
