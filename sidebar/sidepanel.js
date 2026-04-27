@@ -685,7 +685,112 @@ function matchIndustryConfig(industry) {
   return null;
 }
 
-const STOCK_ANALYSIS_SYSTEM_PROMPT = `你是一位专业的投资分析师，严格按照"投资公司分析框架"对股票进行全方位深度分析。
+const STOCK_ANALYSIS_SYSTEM_PROMPT = `你是一位专业的投资分析师，整合7位投资大师的完整思维体系对股票进行全方位深度分析。
+
+## 七大师投资思维体系速查
+
+| 大师 | 核心方法论 | 一句话精髓 |
+|------|-----------|-----------|
+| 🎩 巴菲特 | 能力圈 + 护城河 + 安全边际 | "风险来自不知道自己在做什么" |
+| 🏃 林奇 | 六类分类 + PEG + 两分钟演练 | "买你了解的" |
+| 🔬 费雪 | 15点选股 + 闲聊法 + 长期持有 | "如果买对了，几乎永远不卖" |
+| 🧠 芒格 | 逆向思维 + 心智模型格栅 + 25种认知偏差 | "以合理价格买伟大生意" |
+| 📊 马克斯 | 周期定位 + 第二层次思维 + 风险即永久损失 | "最危险的事是相信没有风险" |
+| 🎯 段永平 | 本分哲学 + Stop Doing List + 睡得着觉 | "做对的事情，把事情做对" |
+| 🌊 达利欧 | 经济机器 + 债务周期 + 全天候 + 原则体系 | "理解因果，系统化决策" |
+
+## 统一快速筛选（20问）
+
+分析前先过核心筛选问题，任何"否"即为红旗：
+
+### A. 商业本质
+| # | 维度 | 问题 | 否 = 红旗 | 大师来源 |
+|---|------|------|-----------|---------|
+| 1 | 能力圈/本分 | 我能否用一段话说清这家公司靠什么赚钱？ | 说不清 | 巴菲特+段永平 |
+| 2 | 护城河 | 竞争对手能否通过努力复制其核心优势？ | 能 | 巴菲特+芒格+费雪 |
+| 3 | 定价权 | 能否提价5-10%而不流失大量客户？ | 不能 | 巴菲特+芒格+段永平 |
+| 4 | 商业模式简洁 | 这是不是一门"简单、可理解、可持续"的生意？ | 不是 | 段永平+巴菲特 |
+| 5 | 持久性 | 10年后这家公司是否大概率更值钱？ | 不会 | 巴菲特+段永平+费雪 |
+
+### B. 财务与估值
+| # | 维度 | 问题 | 否 = 红旗 | 大师来源 |
+|---|------|------|-----------|---------|
+| 6 | 盈利质量 | 利润是否真实转化为现金？ | 否 | 巴菲特+段永平 |
+| 7 | 债务安全 | 最坏情况下（收入-30%），能否存活？ | 否 | 巴菲特+林奇+马克斯 |
+| 8 | 安全边际 | 当前价格与内在价值的差距是否足够大？ | 否 | 巴菲特+芒格+马克斯 |
+| 9 | PEG | P/E是否被增长率证明合理（PEG≤1）？ | PEG>1.5 | 林奇 |
+| 10 | 增长潜力 | 是否拥有未来数年仍有巨大市场潜力的产品/服务？ | 否 | 费雪 |
+
+### C. 管理层与治理
+| # | 维度 | 问题 | 否 = 红旗 | 大师来源 |
+|---|------|------|-----------|---------|
+| 11 | 管理层诚信 | 管理层是否坦诚面对问题？（自动否决项） | 否=立即否决 | 巴菲特+芒格+段永平 |
+| 12 | 利益一致 | 管理层持股是否与股东利益一致？ | 否 | 费雪+巴菲特 |
+| 13 | 资本配置 | 分红/回购/再投资是否理性？ | 否 | 巴菲特+芒格 |
+| 14 | 本分 | 公司是否做对的事情而非容易的事情？ | 否 | 段永平 |
+| 15 | 长期导向 | 管理层是否关注长期价值而非短期股价？ | 否 | 费雪+段永平+巴菲特 |
+
+### D. 周期与风险
+| # | 维度 | 问题 | 否 = 红旗 | 大师来源 |
+|---|------|------|-----------|---------|
+| 16 | 周期定位 | 当前处于行业/市场周期的什么位置？ | 顶部 | 马克斯+达利欧 |
+| 17 | 逆向检查 | 如果我会在这只股票上亏钱，原因是什么？ | 答不出 | 芒格+马克斯 |
+| 18 | 共识风险 | 大多数人看多时，什么可能出错？ | 想不出 | 马克斯+芒格 |
+| 19 | 债务周期 | 公司杠杆是否在债务周期中安全？ | 不安全 | 达利欧 |
+| 20 | 睡得着觉 | 买了之后能否安心睡觉？ | 不能 | 段永平 |
+
+## 七大师分视角深度分析
+
+分析中请融入以下7位大师的独特视角：
+
+### 🎩 巴菲特视角
+- 护城河评级（宽/窄/无），护城河趋势（变宽/稳定/变窄）
+- 管理层诚信（自动否决项）+ 资本配置能力 + 主人翁心态
+- Owner Earnings = 净利+折摊-维持性资本支出-营运资本增加
+- 安全边际分级：极高确定性→20-30%折价，一般→30-40%，不确定→40-50%
+- 卖出标准：价格高估/护城河破坏/管理层诚信问题/更好机会
+
+### 🏃 林奇视角
+- 六类分类：缓慢增长/稳健增长/快速增长/周期型/困境反转型/隐蔽资产型
+- PEG估值：PEG≤1合理，PEG>1.5偏贵（需特殊理由）
+- 两分钟演练：用2分钟说清为什么想买这只股票
+- 理想公司特征检查（名字无聊/业务沉闷/机构不持有等）
+- 个人消费者体验判断
+
+### 🔬 费雪视角
+- 15点选股清单：至少满足10点才考虑投资
+- 闲聊法(scuttlebutt)：从客户/供应商/竞争对手处获取信息
+- 增长潜力：未来数年是否有巨大市场空间？
+- 研发投入与创新持续性
+- 长期持有原则："如果买对了，几乎永远不卖"
+
+### 🧠 芒格视角
+- 逆向思维：先想怎么失败，再看怎么成功
+- 心智模型格栅：从多学科角度审视（心理学/经济学/生物学/物理学）
+- 25种认知偏差自查：确认偏差/过度自信/沉没成本/从众效应等
+- 能力圈边界清晰：不懂的不碰
+- Lollapalooza效应：多种因素叠加产生极端结果
+
+### 📊 马克斯视角
+- 周期定位：钟摆从极端→均值回归→极端 的过程
+- 第二层次思维：别人看到好，你要想"好在价格里了吗？"
+- 风险即永久损失：不把波动等同风险
+- 最危险的话："这次不一样"
+- 逆向投资：别人贪婪时恐惧，别人恐惧时贪婪
+
+### 🎯 段永平视角
+- 本分哲学：做对的事情，把事情做对
+- Stop Doing List：不该做的坚决不做
+- 商业模式第一：好生意>好管理>好价格
+- 能力圈：只投看得懂的
+- 睡得着觉原则：买了不能安心睡觉的不投
+
+### 🌊 达利欧视角
+- 经济机器模型：生产率增长+短期债务周期+长期债务周期
+- 债务周期定位：当前处于长债务周期的什么阶段？
+- 全天候策略：在不同经济环境中保持平衡
+- 原则体系：可重复的决策规则
+- 理解因果关系：不只看到现象，要看到背后的逻辑链
 
 ## 行业特色指标分析要求
 
@@ -698,113 +803,129 @@ const STOCK_ANALYSIS_SYSTEM_PROMPT = `你是一位专业的投资分析师，严
 - **金融行业**：重点关注净息差、不良贷款率、拨备覆盖率、资本充足率、内含价值增速
 - **互联网/软件**：重点关注MAU/DAU、ARPU、获客效率、毛利率、净收入留存率(NRR)
 
-请在分析中结合行业特点，对这些特色指标进行专业解读。
+## 分析框架（7大维度逐项分析，每维度标注相关大师）
 
-## 分析框架（必须按以下7大维度逐项分析）
-
-### 1. 行业与商业模式 (Business Model & Industry)
-- **行业天花板**：市场空间有多大？是处于成长期、成熟期还是衰退期？
-- **竞争格局**：行业是高度分散还是寡头垄断？主要竞争对手是谁？
-- **护城河 (Economic Moat)**：
+### 1. 行业与商业模式 (巴菲特+段永平+费雪)
+- **行业天花板**：市场空间？成长期/成熟期/衰退期？
+- **竞争格局**：分散还是寡头？主要竞争对手？
+- **护城河分析**（巴菲特5种护城河类型）：
   - 无形资产（品牌、专利、特许经营权）
-  - 转换成本（用户离开的代价有多大？）
-  - 网络效应（用户越多越好用吗？）
-  - 成本优势（规模效应、独特资源、流程优化）
-- **商业模式**：赚钱逻辑（靠什么赚钱）、议价能力（对上下游话语权）
+  - 转换成本（用户离开的代价）
+  - 网络效应（用户越多越好用）
+  - 成本优势（规模效应、独特资源）
+  - 高效规模（细分市场垄断）
+- **商业模式**：赚钱逻辑、议价能力、本分评估
 
-### 2. 财务稳健性 (Financial Health)
-- **盈利能力**：ROE(净资产收益率)、毛利率与净利率
-- **营运效率**：资产周转率、应收账款周转天数、库存周转率
-- **现金流**：经营性现金流是否为正？是否能覆盖净利润？
+### 2. 财务稳健性 (巴菲特+林奇+马克斯)
+- **盈利能力**：ROE、ROIC(10年平均)、毛利率与净利率
+- **营运效率**：资产周转率、应收周转天数、库存周转率
+- **现金流**：经营性现金流/归母净利润比率≥1.0优秀
 - **三大现金流关系分析**：
-  - 经营CF/投资CF/筹资CF三者组合模式 → 现金流类型判断（成熟奶牛型/扩张成长型/融资扩张型/创业困境型等）
-  - 经营CF/归母净利润比率 → 盈利质量（≥1.0优秀，0.7-1.0一般，<0.7较差）
+  - 经营CF/投资CF/筹资CF组合模式 → 现金流类型（成熟奶牛型/扩张成长型等）
   - 投资CF/经营CF比率 → 投资扩张力度
   - 筹资CF/经营CF比率 → 融资依赖度
-- **资产负债**：资产负债率、速动比率（债务危机风险？）
+- **资产负债**：资产负债率、速动比率、最坏情况存活测试
 
-### 3. 管理层质量 (Management & Governance)
-- **历史表现**：管理层承诺兑现情况
-- **激励机制**：管理层持股与利益一致性
-- **资本配置**：分红/回购/再投资的质量
-- **企业文化**：价值观与人才吸引力
+### 3. 管理层质量 (巴菲特+费雪+段永平)
+- **诚信评估**（自动否决项）：是否坦诚面对问题？
+- **资本配置记录**：分红/回购/再投资质量
+- **利益一致性**：管理层持股、激励结构
+- **本分评估**（段永平）：做对的事情还是容易的事情？
+- **长期导向**：是否关注长期价值？
 
-### 4. 大股东/机构持股变化分析 (Shareholder Structure & Institutional Holdings)
-- **股东户数变化**：
-  - 股东户数增减趋势（减少=筹码集中，增加=筹码分散）
-  - 户均持股变化（增加=机构收集筹码，减少=机构派发筹码）
-  - 筹码集中度判断（高度集中/集中/分散/高度分散）
-- **十大流通股东分析**：
-  - 机构持股比例和变化趋势
-  - 知名机构/基金进出情况（社保、QFII、公募、私募、险资等）
-  - 增减持动向统计（增持家数 vs 减持家数）
-  - 大股东/实控人持股变化
-- **机构态度解读**：
-  - 机构整体看好/看空/观望
-  - 聪明钱（Smart Money）流向分析
-  - 机构成本区估算（如数据可得）
+### 4. 大股东/机构持股变化分析
+- **股东户数变化**：增减趋势、筹码集中度判断
+- **十大流通股东**：机构持股比例变化、知名机构进出
+- **机构态度**：看好/看空/观望、Smart Money流向
 
-### 5. 估值分析 (Valuation)
-- **绝对估值 (DCF)**：自由现金流折现模型，计算内在价值
-- **相对估值**：PE/PS/PB 与行业和历史对比
-- **安全边际**：当前股价是否比内在价值至少便宜20%-30%？
+### 5. 估值分析 (巴菲特+林奇+芒格+马克斯)
+- **巴菲特方法**：DCF估值、Owner Earnings、安全边际计算
+- **林奇方法**：PEG估值、六类分类匹配估值
+- **马克斯方法**：周期调整估值、市场情绪折溢价
+- **估值结论**：严重低估/低估/合理/高估/严重高估
 
-### 6. 核心风险 (Key Risks)
-- **政策风险**：监管环境变化
-- **技术替代**：颠覆性技术威胁
-- **宏观风险**：汇率、利率、通胀影响
-- **关键人风险**：灵魂人物离开后影响
+### 6. 核心风险 (芒格+马克斯+达利欧)
+- **逆向检查**（芒格）：列出3条可能亏钱的原因
+- **周期风险**（马克斯+达利欧）：当前周期位置+债务风险
+- **结构性风险**：护城河收窄、技术颠覆、监管攻击
+- **财务性风险**：过度杠杆、现金流造假、表外负债
+- **行为性风险**（芒格）：确认偏差/从众效应等认知陷阱
 
-### 7. 预期与触发点 (Catalysts)
+### 7. 预期与催化剂 (费雪+马克斯)
 - **市场预期**：当前股价反映了多少好消息？
 - **触发因素**：未来6-12个月驱动股价上涨的事件
+- **费雪视角**：长期增长催化剂（3-5年维度）
 
 ## 输出格式（Markdown）
 
-### 📊 一、公司概览与定调
-3-5句话概括公司核心定位和投资定调。
+### 📊 一、公司概览与定调（快速筛选结果）
+3-5句话概括公司核心定位。快速筛选红旗统计（红旗数/20）。
 
 ### 🏭 二、行业与商业模式分析
-按框架4个维度逐一分析，给出护城河评级（强/中/弱/无）。
+[巴菲特+段永平+费雪] 护城河评级（宽/中/窄/无）+ 趋势（变宽/稳定/变窄）\
+林奇分类：[缓慢增长/稳健增长/快速增长/周期型/困境反转/隐蔽资产]\
+段永平本分评估：[本分/不本分 + 理由]
 
 ### 💰 三、财务稳健性评估
-关键指标表格 + 评价。判断：优秀/良好/一般/危险。
+[巴菲特+林奇+马克斯] 关键指标表格 + 综合评价（优秀/良好/一般/危险）\
+Owner Earnings估算（巴菲特方法）
 
 ### 👔 四、管理层质量评价
-4个维度逐一评分（优/良/中/差）+ 综合评价。
+[巴菲特+费雪+段永平] 4维度评分（优/良/中/差）+ 诚信自动否决检查\
+费雪15点清单覆盖统计
 
 ### 🏢 五、大股东/机构持股变化分析
-- **股东户数变化分析**：最新数据、环比变化、筹码集中度判断
-- **十大流通股东列表**：表格展示股东名称、持股数、占比、变动、股东类型
-- **机构持股特征**：机构数量、增减持统计、聪明钱流向
-- **综合评价**：机构整体态度（强烈看好/看好/中性/谨慎/看空）+ 筹码集中度评级
+股东户数趋势 + 十大流通股东表格 + 机构态度评级
 
 ### 📐 六、估值分析
-- DCF估值区间
-- PE/PB/PS 与同业对比
-- 安全边际计算
-- 估值结论：严重低估 / 低估 / 合理 / 高估 / 严重高估
+- 巴菲特DCF估值区间 + 安全边际
+- 林奇PEG分析
+- 马克斯周期调整估值
+- 汇总估值结论
 
 ### ⚠️ 七、核心风险提示
-按4个维度列举，标注风险等级（高/中/低）。
+[芒格+马克斯+达利欧] 逆向思维3条失败路径 + 风险等级（高/中/低）\
+芒格认知偏差警告 + 达利欧债务周期风险
 
 ### 🚀 八、预期与催化剂
-市场预期分析 + 未来6-12个月催化剂列表。
+[费雪+马克斯] 市场预期分析 + 6-12个月催化剂 + 长期催化剂（3-5年）
 
-### 🎯 九、投资策略建议
-结合当前股价，给出明确的投资策略：
-- **建议操作**：强烈买入 / 买入 / 持有 / 观望 / 回避
-- **目标价位**：给出合理价格区间
-- **仓位建议**：建议配置比例
+### 🤝 九、七大师共识与分歧
+| 大师 | 态度 | 核心理由 |
+|------|------|---------|
+列出每位大师的买入/持有/卖出态度及一句话理由。统计共识度（几位看多/几位谨慎）。
+
+### 🎯 十、投资策略建议
+- **建议操作**：强烈买入/买入/持有/观望/回避
+- **目标价位**：合理价格区间
+- **仓位建议**：建议配置比例（段永平：睡得着觉的比例）
 - **持有期限**：短线/中线/长线
 - **止损参考**：建议止损位
-- **关键跟踪指标**：需要持续关注的3-5个核心指标
+- **核心跟踪指标**：需持续关注的3-5个指标
+- **段永平检查**：买了能睡着觉吗？
+- **芒格检查**：如果错了，最大亏损是多少？
 
 ## 输出规范
 - Markdown格式，数据用表格呈现
 - 百分比变化用「+X.X% / -X.X%」格式
 - 如数据不足，明确标注"数据不足"而非编造
-- 投资策略建议必须基于估值和安全边际分析，有理有据`;
+- 投资策略建议必须基于估值和安全边际分析，有理有据
+- 每位大师的视角在相关章节明确标注来源`;
+
+// ======================== 投资大师分析风格定义 ========================
+
+const INVESTMENT_MASTER_PROMPTS = {
+  default: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  masters: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  buffett: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  lynch: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  fisher: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  munger: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  marks: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  duanyongping: STOCK_ANALYSIS_SYSTEM_PROMPT,
+  dalio: STOCK_ANALYSIS_SYSTEM_PROMPT,
+};
+
 
 // ======================== 状态管理 ========================
 
@@ -867,6 +988,7 @@ const state = {
   saStock: null,           // {code, name, secid, price, changePct} 当前选中的股票
   saFundamentals: null,    // 基本面数据
   saMarkdown: '',          // 分析报告
+  saAnalysisStyle: 'masters', // 分析风格 (masters/buffett/lynch/fisher/munger/marks/duanyongping/dalio)
   isSARunning: false,      // 是否正在分析
   // 热点信息模块
   hotspotItems: [],         // 所有抓取的热点数据
@@ -1692,6 +1814,28 @@ function bindEvents() {
     }
   });
 
+  // 分析风格选择器
+  $$('.sa-style-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      // 更新 active 状态
+      $$('.sa-style-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      // 保存选择
+      state.saAnalysisStyle = chip.dataset.style || 'masters';
+      // 更新提示文字
+      const styleNames = {
+        masters: '七大师综合', buffett: '巴菲特', lynch: '林奇',
+        fisher: '费雪', munger: '芒格', marks: '马克斯',
+        duanyongping: '段永平', dalio: '达利欧'
+      };
+      const hint = $('#sa-style-hint');
+      if (hint) {
+        const name = styleNames[state.saAnalysisStyle] || '七大师综合';
+        hint.textContent = `当前：${name}视角分析`;
+      }
+    });
+  });
+
   // 股票信息卡子Tab切换
   $$('.sa-info-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -2085,6 +2229,8 @@ function formatHSTime(date) {
   const isToday = date.toDateString() === now.toDateString();
   if (isToday) {
     return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+
+
   }
   return `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
@@ -2261,13 +2407,19 @@ function computeHotspotOverlap(items) {
     if (ra !== rb) parent[ra] = rb;
   }
 
-  // 两两比较（限制范围：只比较前200条，避免O(n²)太慢）
-  const limit = Math.min(items.length, 200);
-  for (let i = 0; i < limit; i++) {
-    for (let j = i + 1; j < limit; j++) {
+  // 两两比较全量覆盖（关键词数量预过滤优化，O(kn²) → 实际接近 O(n log n)）
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      // 预过滤：关键词数量差距超过 60% 的直接跳过
+      const ki = items[i]._keywords.length;
+      const kj = items[j]._keywords.length;
+      if (ki === 0 || kj === 0) continue;
+      const lenRatio = Math.min(ki, kj) / Math.max(ki, kj);
+      if (lenRatio < 0.4) continue;
+      
       const sim = similarity(items[i]._keywords, items[j]._keywords);
-      if (sim >= 0.4) {
-        // 高相似度 → 视为同一事件，合并到同一组
+      if (sim >= 0.35) {
+        // 相似度 ≥ 0.35 → 合并到同一组（降低阈值提高召回）
         union(i, j);
       }
     }
@@ -2403,11 +2555,20 @@ function renderHotspotList() {
     const hotClass = isHot ? 'hs-item-hot' : isWarm ? 'hs-item-warm' : '';
     const hotBadge = isHot ? `<span class="hs-hot-badge">🔥${overlap}源</span>` : isWarm ? `<span class="hs-warm-badge">📌${overlap}源</span>` : '';
 
-    // 多来源展示
+    // 多来源展示（超过3个来源时折叠显示）
     const sources = item.sources || [{ source: item.source, sourceType: item.sourceType, url: item.url }];
-    const sourcesHtml = sources.map(s =>
-      `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
-    ).join(' ');
+    let sourcesHtml;
+    if (sources.length <= 3) {
+      sourcesHtml = sources.map(s =>
+        `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
+      ).join(' ');
+    } else {
+      // 3个以上来源：显示前2个 + 计数
+      const firstTwo = sources.slice(0, 2).map(s =>
+        `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
+      ).join(' ');
+      sourcesHtml = `${firstTwo} <span class="hs-item-source-badge overlap-count">+${sources.length - 2}源</span>`;
+    }
 
     // 使用 data-idx 索引方式，避免内联 onclick 和 URL 转义问题
     html += `
@@ -2786,7 +2947,25 @@ function bindHotspotEvents() {
     const hsItem = e.target.closest('.hs-item[data-company-idx]');
     if (!hsItem) return;
     const idx = parseInt(hsItem.dataset.companyIdx, 10);
-    const items = state.companyTypeFilter === 'news' ? state.companyItems : state.companyAnnouncements;
+    const isNews = state.companyTypeFilter === 'news';
+    let items = isNews ? state.companyItems : state.companyAnnouncements;
+    // 与 renderCompanyList 保持一致的过滤逻辑（兼容聚合后的 companies 数组）
+    if (state.companyFilter !== 'all') {
+      items = items.filter(item => {
+        if (item.companyCode === state.companyFilter || item.companyName === state.companyFilter) return true;
+        // 聚合后的条目可能包含多公司关联
+        if (item.companies) {
+          return item.companies.some(c => c.code === state.companyFilter || c.name === state.companyFilter);
+        }
+        return false;
+      });
+    }
+    if (isNews && state.companySentimentFilter !== 'all') {
+      items = items.filter(item => {
+        const sentiment = state.companySentimentCache[item.id] || 'neutral';
+        return sentiment === state.companySentimentFilter;
+      });
+    }
     const item = items[idx];
     if (!item) return;
     const url = (item.sources && item.sources[0]?.url) || item.url;
@@ -3039,7 +3218,7 @@ async function fetchCompanyData() {
   const now = Date.now();
   const oneDayMs = 24 * 60 * 60 * 1000;
   const sevenDayMs = 7 * 24 * 60 * 60 * 1000;
-  state.companyItems = allNews.filter(item => {
+  let companyItems = allNews.filter(item => {
     if (!item.time || isNaN(item.time.getTime())) return true;
     return (now - item.time.getTime()) < oneDayMs;
   }).sort((a, b) => {
@@ -3047,6 +3226,20 @@ async function fetchCompanyData() {
     const tb = b.time && !isNaN(b.time.getTime()) ? b.time.getTime() : 0;
     return tb - ta;
   });
+
+  // 相似资讯聚合：合并重复报道，汇总来源和关联公司
+  companyItems = computeCompanyOverlap(companyItems);
+  
+  // 按重合度排序（多源报道优先），相同重合度按时间排
+  companyItems.sort((a, b) => {
+    const overlapDiff = (b.overlap || 0) - (a.overlap || 0);
+    if (overlapDiff !== 0) return overlapDiff;
+    const ta = a.time?.getTime() || 0;
+    const tb = b.time?.getTime() || 0;
+    return tb - ta;
+  });
+
+  state.companyItems = companyItems;
 
   state.companyAnnouncements = allAnnouncements.filter(item => {
     if (!item.time || isNaN(item.time.getTime())) return true;
@@ -3077,6 +3270,139 @@ async function fetchCompanyData() {
  * 主策略：东方财富搜索API（search-api-web），按公司名称精准搜索个股新闻
  * 副策略：从已抓取的行业热点数据中按关键词补充
  */
+/**
+ * 计算公司资讯重合度并合并重复新闻
+ * 原理：不同关注公司可能报道同一事件，标题相似即合并
+ * 合并后保留最早的一条，来源和公司信息合并展示
+ */
+function computeCompanyOverlap(items) {
+  if (!items || items.length < 2) return items;
+  
+  const stopWords = new Set(['的', '了', '在', '是', '和', '与', '对', '将', '被', '有', '也', '不', '这', '该', '为', '及', '等', '中', '上', '下', '后', '前', '从', '到', '以', '或', '可', '其', '已', '一', '个']);
+  
+  function extractKeywords(title) {
+    if (!title) return [];
+    return title
+      .replace(/[【】《》、，。！？：；""''（）\[\]{}]/g, ' ')
+      .split(/\s+/)
+      .filter(w => w.length >= 2 && !stopWords.has(w));
+  }
+  
+  function similarity(kw1, kw2) {
+    if (!kw1.length || !kw2.length) return 0;
+    const set1 = new Set(kw1);
+    const set2 = new Set(kw2);
+    let common = 0;
+    for (const w of set1) { if (set2.has(w)) common++; }
+    return common / (set1.size + set2.size - common);
+  }
+  
+  items.forEach(item => {
+    item._keywords = extractKeywords(item.title);
+    if (!item.sources) {
+      item.sources = [{ source: item.source, sourceType: item.sourceType, url: item.url }];
+    }
+    item._companies = [{ code: item.companyCode, name: item.companyName }];
+  });
+  
+  const parent = items.map((_, i) => i);
+  function find(x) {
+    while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; }
+    return x;
+  }
+  function union(a, b) {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent[ra] = rb;
+  }
+  
+  for (let i = 0; i < items.length; i++) {
+    for (let j = i + 1; j < items.length; j++) {
+      const ki = items[i]._keywords.length;
+      const kj = items[j]._keywords.length;
+      if (ki === 0 || kj === 0) continue;
+      const lenRatio = Math.min(ki, kj) / Math.max(ki, kj);
+      if (lenRatio < 0.4) continue;
+      
+      const sim = similarity(items[i]._keywords, items[j]._keywords);
+      if (sim >= 0.35) {
+        union(i, j);
+      }
+    }
+  }
+  
+  const groups = new Map();
+  for (let i = 0; i < items.length; i++) {
+    const root = find(i);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(i);
+  }
+  
+  const mergedItems = [];
+  for (const [root, indices] of groups) {
+    const groupItems = indices.map(i => items[i]);
+    groupItems.sort((a, b) => {
+      const ta = a.time?.getTime() || 0;
+      const tb = b.time?.getTime() || 0;
+      return ta - tb;
+    });
+    
+    const primary = groupItems[0];
+    
+    const allSources = [];
+    const seenSourceNames = new Set();
+    for (const item of groupItems) {
+      const srcName = item.source;
+      if (!seenSourceNames.has(srcName)) {
+        seenSourceNames.add(srcName);
+        allSources.push({ source: srcName, sourceType: item.sourceType, url: item.url });
+      }
+      if (item.sources) {
+        for (const s of item.sources) {
+          if (!seenSourceNames.has(s.source)) {
+            seenSourceNames.add(s.source);
+            allSources.push(s);
+          }
+        }
+      }
+    }
+    
+    const allCompanies = [];
+    const seenCompanyNames = new Set();
+    for (const item of groupItems) {
+      const name = item.companyName;
+      if (!seenCompanyNames.has(name)) {
+        seenCompanyNames.add(name);
+        allCompanies.push({ code: item.companyCode, name: item.companyName });
+      }
+      if (item._companies) {
+        for (const c of item._companies) {
+          if (!seenCompanyNames.has(c.name)) {
+            seenCompanyNames.add(c.name);
+            allCompanies.push(c);
+          }
+        }
+      }
+    }
+    
+    primary.sources = allSources;
+    primary.companies = allCompanies;
+    primary.overlap = allSources.length;
+    primary.companyCount = allCompanies.length;
+    
+    for (const item of groupItems) {
+      if (item.summary && item.summary.length > (primary.summary || '').length) {
+        primary.summary = item.summary;
+      }
+    }
+    
+    mergedItems.push(primary);
+  }
+  
+  mergedItems.forEach(item => { delete item._keywords; delete item._companies; });
+  
+  return mergedItems;
+}
+
 async function fetchCompanyNews(watchItem) {
   try {
     const items = [];
@@ -3415,9 +3741,15 @@ function renderCompanyList() {
   const isNews = state.companyTypeFilter === 'news';
   let items = isNews ? state.companyItems : state.companyAnnouncements;
 
-  // 公司过滤
+  // 公司过滤（兼容聚合后的 companies 数组）
   if (state.companyFilter !== 'all') {
-    items = items.filter(item => item.companyCode === state.companyFilter || item.companyName === state.companyFilter);
+    items = items.filter(item => {
+      if (item.companyCode === state.companyFilter || item.companyName === state.companyFilter) return true;
+      if (item.companies) {
+        return item.companies.some(c => c.code === state.companyFilter || c.name === state.companyFilter);
+      }
+      return false;
+    });
   }
   
   // 情感过滤（仅对资讯生效，公告不过滤）
@@ -3446,14 +3778,31 @@ function renderCompanyList() {
 
   let html = '';
   displayItems.forEach((item, idx) => {
-    // 公司名称标签
-    const companyBadge = `<span class="hs-item-source-badge company">${item.companyName}</span>`;
+    // 重合度徽章
+    const overlap = item.overlap || 1;
+    const companyCount = item.companyCount || 1;
+    const isHot = overlap >= 3;
+    const isWarm = overlap >= 2 && !isHot;
+    const overlapBadge = isHot ? `<span class="hs-hot-badge">🔥${overlap}源</span>` : isWarm ? `<span class="hs-warm-badge">📌${overlap}源</span>` : '';
+    const multiCompanyBadge = companyCount > 1 ? `<span class="hs-item-source-badge overlap-count">${companyCount}家公司</span>` : '';
 
-    // 来源标签
-    const sources = item.sources || [{ source: item.source, sourceType: item.sourceType, url: item.url }];
-    const sourcesHtml = sources.map(s =>
-      `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
+    const companies = item.companies || [{ name: item.companyName, code: item.companyCode }];
+    const companyBadge = companies.map(c =>
+      `<span class="hs-item-source-badge company">${c.name}</span>`
     ).join(' ');
+
+    const sources = item.sources || [{ source: item.source, sourceType: item.sourceType, url: item.url }];
+    let sourcesHtml;
+    if (sources.length <= 3) {
+      sourcesHtml = sources.map(s =>
+        `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
+      ).join(' ');
+    } else {
+      const firstTwo = sources.slice(0, 2).map(s =>
+        `<span class="hs-item-source-badge ${s.sourceType || 'custom'}">${s.source}</span>`
+      ).join(' ');
+      sourcesHtml = `${firstTwo} <span class="hs-item-source-badge overlap-count">+${sources.length - 2}源</span>`;
+    }
     
     // 情感标签（仅资讯显示）
     let sentimentBadge = '';
@@ -3475,9 +3824,11 @@ function renderCompanyList() {
       `<span class="hs-item-tag announcement">${t}</span>`
     ).join('');
 
+    const overlapClass = overlap >= 3 ? 'hs-item-hot' : overlap >= 2 ? 'hs-item-warm' : '';
     html += `
-      <div class="hs-item" data-company-idx="${idx}">
+      <div class="hs-item ${overlapClass}" data-company-idx="${idx}">
         <div class="hs-item-header">
+          ${overlapBadge} ${multiCompanyBadge}
           <div class="hs-item-source">
             ${companyBadge}
             ${sourcesHtml}

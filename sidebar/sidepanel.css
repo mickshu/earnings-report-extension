@@ -682,6 +682,55 @@ body {
 }
 
 /* 分析框架折叠区 */
+/* 分析风格选择器 */
+.sa-style-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.sa-style-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.sa-style-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.sa-style-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.sa-style-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+.sa-style-chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.sa-style-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-style: italic;
+}
+
 .sa-framework-details {
   margin-bottom: 12px;
   border: 1px solid var(--border);
@@ -3306,4 +3355,15 @@ body {
 .sa-mgmt-card-field strong {
   color: var(--text);
   font-weight: 500;
+}
+
+
+/* 来源聚合计数徽章 */
+.hs-item-source-badge.overlap-count {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
 }

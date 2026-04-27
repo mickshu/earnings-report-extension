@@ -460,6 +460,22 @@
           <p class="sa-search-hint">基于投资公司分析框架，结合当前股价给出投资策略建议</p>
         </div>
 
+        <!-- 分析风格选择器 -->
+        <div class="sa-style-selector">
+          <span class="sa-style-label">分析风格</span>
+          <div class="sa-style-chips">
+            <button class="sa-style-chip active" data-style="masters">🔮 七大师综合</button>
+            <button class="sa-style-chip" data-style="buffett">🎩 巴菲特</button>
+            <button class="sa-style-chip" data-style="lynch">🏃 林奇</button>
+            <button class="sa-style-chip" data-style="fisher">🔬 费雪</button>
+            <button class="sa-style-chip" data-style="munger">🧠 芒格</button>
+            <button class="sa-style-chip" data-style="marks">📊 马克斯</button>
+            <button class="sa-style-chip" data-style="duanyongping">🎯 段永平</button>
+            <button class="sa-style-chip" data-style="dalio">🌊 达利欧</button>
+          </div>
+          <p id="sa-style-hint" class="sa-style-hint">当前：七大师综合视角分析</p>
+        </div>
+
         <!-- 分析框架说明（折叠） -->
         <details class="sa-framework-details">
           <summary class="sa-framework-summary">📖 查看分析框架</summary>
@@ -832,6 +848,16 @@
       </div>
     </div>
   </div>
+
+  <!-- 模块化脚本（加载顺序重要） -->
+  <script src="modules/utils.js"></script>
+  <script src="modules/state.js"></script>
+  <script src="modules/storage.js"></script>
+  <script src="modules/hotspot.js"></script>
+  <script src="modules/company.js"></script>
+  <script src="modules/chat.js"></script>
+  <script src="modules/stock-analysis.js"></script>
+  <script src="modules/settings.js"></script>
 
   <script src="sidepanel.js"></script>
 </body>
