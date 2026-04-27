@@ -263,7 +263,7 @@ async function fetchCompanyData() {
 
   state.companyItems = companyItems;
 
-  state.companyAnnouncements = allAnnouncements.filter(item => {
+  let companyAnnouncements = allAnnouncements.filter(item => {
     if (!item.time || isNaN(item.time.getTime())) return true;
     return (now - item.time.getTime()) < sevenDayMs;
   }).sort((a, b) => {
@@ -271,6 +271,20 @@ async function fetchCompanyData() {
     const tb = b.time && !isNaN(b.time.getTime()) ? b.time.getTime() : 0;
     return tb - ta;
   });
+
+  // 相同公告聚合（与资讯逻辑保持一致）
+  companyAnnouncements = computeCompanyOverlap(companyAnnouncements);
+
+  // 按重合度排序（多源报道优先），相同重合度按时间排
+  companyAnnouncements.sort((a, b) => {
+    const overlapDiff = (b.overlap || 0) - (a.overlap || 0);
+    if (overlapDiff !== 0) return overlapDiff;
+    const ta = a.time?.getTime() || 0;
+    const tb = b.time?.getTime() || 0;
+    return tb - ta;
+  });
+
+  state.companyAnnouncements = companyAnnouncements;
 
   if (loading) loading.style.display = 'none';
 
