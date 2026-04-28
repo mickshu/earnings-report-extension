@@ -292,9 +292,10 @@ async function fetchCompanyData() {
   updateCompanyUpdateTime();
   
   // 后台异步进行情感分析（不阻塞渲染）
-  if (state.settings.apiKey && state.companyItems.length > 0) {
-    console.log(`[情感分析] 开始分析${state.companyItems.length}条资讯...`);
-    batchAnalyzeSentiment(state.companyItems.slice(0, 50)).then(() => {
+  const allItemsForSentiment = [...state.companyItems, ...state.companyAnnouncements];
+  if (state.settings.apiKey && allItemsForSentiment.length > 0) {
+    console.log(`[情感分析] 开始分析${allItemsForSentiment.length}条资讯/公告...`);
+    batchAnalyzeSentiment(allItemsForSentiment.slice(0, 50)).then(() => {
       console.log('[情感分析] 分析完成，重新渲染列表');
       renderCompanyList(); // 分析完成后重新渲染显示标签
     });
@@ -649,32 +650,65 @@ async function fetchCompanyAnnouncements(watchItem) {
 }
 
 /**
+ * 规则引擎：基于关键词快速判断情感（确定性高、零成本）
+ * 返回 'positive' | 'negative' | null（未命中，需 LLM 兜底）
+ */
+function ruleBasedSentiment(item) {
+  const text = `${item.title || ''} ${item.summary || ''}`;
+
+  const negativePatterns = [
+    /净利润.*(?:下降|下滑|减少|跌|亏损|转亏|预亏|预减|不及预期|暴雷|亏损扩大|由盈转亏)/i,
+    /营收.*(?:下降|下滑|减少)/i,
+    /(?:停产|裁员|关闭|退市风险|被ST|债务违约|逾期|破产|重整|毛利率.*下降|库存积压|订单取消|客户流失)/i,
+    /(?:减持|抛售|清仓|大股东.*减持|高管.*减持|解禁)/i,
+    /(?:立案调查|处罚|违规|诉讼|仲裁|监管函|警示函|被调查)/i,
+    /(?:降价|价格战)/i,
+  ];
+
+  const positivePatterns = [
+    /净利润.*(?:增长|上升|增加|涨|盈利|扭亏|预增|超预期|大增|翻倍)/i,
+    /营收.*(?:增长|上升|增加)/i,
+    /(?:中标|签约|订单|合作|扩产|投产|突破|涨价|产能释放|毛利率.*提升)/i,
+    /(?:增持|回购|举牌|员工持股|股权激励)/i,
+    /(?:分红|派息|高送转|股息)/i,
+    /(?:产品涨价|供不应求)/i,
+  ];
+
+  let isNegative = negativePatterns.some(p => p.test(text));
+  let isPositive = positivePatterns.some(p => p.test(text));
+
+  if (isNegative && isPositive) return null;
+  if (isNegative) return 'negative';
+  if (isPositive) return 'positive';
+  return null;
+}
+
+/**
  * AI情感分析：判断资讯对股票的影响（利好/利空/中性）
+ * 策略：规则引擎优先 → LLM 兜底 → 矛盾校正
  */
 
 async function analyzeNewsSentiment(item) {
   const cacheKey = item.id;
-  
+  const SENTIMENT_VERSION = 'v2';
+
   // 1. 检查内存缓存
   if (state.companySentimentCache[cacheKey]) {
     return state.companySentimentCache[cacheKey];
   }
-  
+
   // 2. 检查持久化缓存（localStorage）
   try {
     const persistentCache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
     if (persistentCache[cacheKey]) {
       const cached = persistentCache[cacheKey];
-      // 检查缓存是否过期（24小时）
       const cacheAge = Date.now() - cached.timestamp;
-      const CACHE_TTL = 24 * 60 * 60 * 1000; // 24小时
-      
-      if (cacheAge < CACHE_TTL) {
-        // 缓存未过期，使用缓存
+      const CACHE_TTL = 24 * 60 * 60 * 1000;
+
+      if (cached.version === SENTIMENT_VERSION && cacheAge < CACHE_TTL) {
         state.companySentimentCache[cacheKey] = cached.sentiment;
         return cached.sentiment;
       } else {
-        // 缓存已过期，删除
         delete persistentCache[cacheKey];
         localStorage.setItem('er_sentiment_cache', JSON.stringify(persistentCache));
       }
@@ -682,18 +716,58 @@ async function analyzeNewsSentiment(item) {
   } catch (e) {
     console.warn('读取情感缓存失败:', e);
   }
-  
-  // 3. 如果没有配置API Key，返回中性
+
+  // 3. 规则引擎快速判断（确定性高、零成本）
+  const ruleSentiment = ruleBasedSentiment(item);
+  if (ruleSentiment) {
+    state.companySentimentCache[cacheKey] = ruleSentiment;
+    try {
+      const persistentCache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
+      persistentCache[cacheKey] = {
+        sentiment: ruleSentiment,
+        timestamp: Date.now(),
+        version: SENTIMENT_VERSION,
+        title: item.title.substring(0, 50)
+      };
+      const keys = Object.keys(persistentCache).sort((a, b) => {
+        return (persistentCache[b].timestamp || 0) - (persistentCache[a].timestamp || 0);
+      });
+      if (keys.length > 100) {
+        keys.slice(100).forEach(key => delete persistentCache[key]);
+      }
+      localStorage.setItem('er_sentiment_cache', JSON.stringify(persistentCache));
+    } catch (e) {
+      console.warn('保存情感缓存失败:', e);
+    }
+    return ruleSentiment;
+  }
+
+  // 4. 如果没有配置API Key，返回中性
   if (!state.settings.apiKey) {
     state.companySentimentCache[cacheKey] = 'neutral';
     return 'neutral';
   }
-  
+
   try {
-    // 优化prompt，减少token消耗
-    const prompt = `判断资讯对${item.companyName}股票的影响（利好/利空/中性），只回答一个词：
+    const prompt = `判断以下资讯对${item.companyName}股票的影响（利好/利空/中性），只回答一个词。
+判断标准：业绩下降、亏损、减持、处罚、诉讼为利空；业绩增长、回购、增持、中标、分红为利好；无法明确判断则为中性。
+
+示例1：
+标题：宁德时代一季度净利润同比增长35%，超预期
+答案：利好
+
+示例2：
+标题：某公司高管计划减持不超过2%股份
+答案：利空
+
+示例3：
+标题：某公司与供应商签订日常采购合同
+答案：中性
+
+实际资讯：
 标题：${item.title}
-摘要：${item.summary || item.title}`;
+摘要：${item.summary || item.title}
+答案：`;
 
     const response = await fetch(`${state.settings.baseUrl}/chat/completions`, {
       method: 'POST',
@@ -704,11 +778,11 @@ async function analyzeNewsSentiment(item) {
       body: JSON.stringify({
         model: state.settings.model,
         messages: [
-          { role: 'system', content: '你是投资分析师，判断资讯对股票影响。只回答：利好/利空/中性' },
+          { role: 'system', content: '你是资深投资分析师，判断资讯对股票的影响。只回答：利好/利空/中性' },
           { role: 'user', content: prompt }
         ],
-        max_tokens: 4,  // 进一步减少，只需一个词
-        temperature: 0.1  // 略微提高，避免过于死板
+        max_tokens: 10,
+        temperature: 0.1
       })
     });
 
@@ -720,41 +794,47 @@ async function analyzeNewsSentiment(item) {
 
     const data = await response.json();
     const result = data.choices?.[0]?.message?.content?.trim() || '中性';
-    
-    // 转换为英文标识
+
     let sentiment = 'neutral';
     if (result.includes('利好') || result.includes('positive')) {
       sentiment = 'positive';
     } else if (result.includes('利空') || result.includes('negative')) {
       sentiment = 'negative';
     }
-    
-    // 4. 写入内存缓存
+
+    // 5. 矛盾校正：若规则明确判定，以规则为准（兜底安全）
+    const ruleCheck = ruleBasedSentiment(item);
+    if (ruleCheck && ruleCheck !== sentiment) {
+      console.warn(`[情感校正] LLM误判 "${item.title.substring(0, 40)}..."，LLM=${sentiment} → 规则=${ruleCheck}`);
+      sentiment = ruleCheck;
+    }
+
+    // 6. 写入内存缓存
     state.companySentimentCache[cacheKey] = sentiment;
-    
-    // 5. 写入持久化缓存
+
+    // 7. 写入持久化缓存
     try {
       const persistentCache = JSON.parse(localStorage.getItem('er_sentiment_cache') || '{}');
       persistentCache[cacheKey] = {
         sentiment: sentiment,
         timestamp: Date.now(),
-        title: item.title.substring(0, 50)  // 保存标题前50字用于调试
+        version: SENTIMENT_VERSION,
+        title: item.title.substring(0, 50)
       };
-      
-      // 清理过期缓存（保留最近100条）
+
       const keys = Object.keys(persistentCache).sort((a, b) => {
         return (persistentCache[b].timestamp || 0) - (persistentCache[a].timestamp || 0);
       });
-      
+
       if (keys.length > 100) {
         keys.slice(100).forEach(key => delete persistentCache[key]);
       }
-      
+
       localStorage.setItem('er_sentiment_cache', JSON.stringify(persistentCache));
     } catch (e) {
       console.warn('保存情感缓存失败:', e);
     }
-    
+
     return sentiment;
   } catch (e) {
     console.error('情感分析失败:', e);
@@ -804,8 +884,8 @@ function renderCompanyList() {
     });
   }
   
-  // 情感过滤（仅对资讯生效，公告不过滤）
-  if (isNews && state.companySentimentFilter !== 'all') {
+  // 情感过滤（资讯和公告均支持）
+  if (state.companySentimentFilter !== 'all') {
     items = items.filter(item => {
       const sentiment = state.companySentimentCache[item.id] || 'neutral';
       return sentiment === state.companySentimentFilter;
@@ -859,19 +939,17 @@ function renderCompanyList() {
       sourcesHtml = `${firstTwo} <span class="hs-item-source-badge overlap-count">+${sources.length - 2}源</span>`;
     }
     
-    // 情感标签（仅资讯显示）
+    // 情感标签（资讯和公告均显示）
     let sentimentBadge = '';
-    if (isNews) {
-      const sentiment = state.companySentimentCache[item.id];
-      if (sentiment === 'positive') {
-        sentimentBadge = '<span class="hs-sentiment-badge positive">🔴 利好</span>';
-      } else if (sentiment === 'negative') {
-        sentimentBadge = '<span class="hs-sentiment-badge negative">🟢 利空</span>';
-      } else if (sentiment === 'neutral') {
-        sentimentBadge = '<span class="hs-sentiment-badge neutral">⚪ 中性</span>';
-      } else {
-        sentimentBadge = '<span class="hs-sentiment-badge analyzing">⏳ 分析中...</span>';
-      }
+    const sentiment = state.companySentimentCache[item.id];
+    if (sentiment === 'positive') {
+      sentimentBadge = '<span class="hs-sentiment-badge positive">🔴 利好</span>';
+    } else if (sentiment === 'negative') {
+      sentimentBadge = '<span class="hs-sentiment-badge negative">🟢 利空</span>';
+    } else if (sentiment === 'neutral') {
+      sentimentBadge = '<span class="hs-sentiment-badge neutral">⚪ 中性</span>';
+    } else {
+      sentimentBadge = '<span class="hs-sentiment-badge analyzing">⏳ 分析中...</span>';
     }
 
     // 公告类型标签
