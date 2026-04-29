@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "投资助手",
-  "version": "2.11.1",
+  "version": "2.11.2",
   "description": "财报解读 + 大师选股器 + 内在价值计算器，融合巴菲特/林奇/费雪/芒格价值投资策略，AI驱动的投资决策助手",
   "permissions": [
     "sidePanel",

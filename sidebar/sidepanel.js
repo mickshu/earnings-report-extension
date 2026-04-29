@@ -307,11 +307,19 @@ const ANALYSIS_SYSTEM_PROMPT = `你是一位资深的行业财报解读专家，
 ### 📊 一、核心业绩概览
 用3-5句话概括本期财报的「定调」结论。
 
-**关键指标逐项评价表**：对以下每个指标，列出当期值 + 变化方向 + 判断等级（优秀/良好/一般/较差）+ 一句话解读：
-| 指标 | 当期值 | 同比变化 | 判断等级 | 解读 |
-|------|--------|---------|---------|------|
+**关键指标逐项评价表**：对以下每个指标，列出当期值 + **上期/去年同期可参考数值（若下方数据中已给出）** + 同比变化幅度 + 判断等级（优秀/良好/一般/较差）+ 一句话解读：
+| 指标 | 当期值 | 较去年同期 | 判断等级 | 解读 |
+|------|--------|-------------|---------|------|
 需覆盖：营业收入、归母净利润、扣非净利润、毛利率、净利率、ROE、经营现金流净额、投资现金流净额、筹资现金流净额、资产负债率、流动比率。
 **重要**：严格参照「关键指标判断标准」表中的阈值进行判断，不要凭感觉。对于缺失数据，用历史趋势或同行业数据推断，并标注"推断值"。
+
+**同期对比**：必须综合利用下方「同期对比数据（本期 vs 去年同期）」与各表中的同比增速字段；若数据中已给出去年同期绝对额，不得在解读中省略同比结论。
+
+**关键指标波动原因分析**：对在「系统自动标记的同比显著波动」中出现的指标（或任一同比变动幅度超过：**营收/净利绝对值≥12%**，或 **毛利率、净利率、ROE 变动≥3 个百分点**，或 **经营现金流同比大幅偏离净利增速**），在「第一章」末尾单独增加小节 **「关键财务指标波动与原因归因」**，对每个命中指标写出：
+1) 变动的量化描述（本期 vs 去年同期 + 口径说明）
+2) 至少 **2 条** 可能成因，区分为：经营实质（量价、结构、费率）/ **一次性或非经常**（政府补助、减值、公允价值、投资收益等）/ 行业与宏观因素
+3) 若为推断，标明「推断」并简述依据。
+若用户提供文本中缺乏细分科目，则说明基于可比数据能做的边界，不得编造明细。
 
 **三大现金流关系分析**：必须根据「三大现金流关系分析小结」中的类型判断和结论，在核心业绩概览中做现金流类型定性（如"成熟奶牛型""扩张成长型"等），并评价：
 - 经营CF/归母净利润比率 → 盈利质量（≥1.0为优秀，0.7-1.0为一般，<0.7为较差）
@@ -4337,27 +4345,27 @@ async function selectAnalysisReport(idx) {
     let multiYearData = [];
     try {
       updateLoading('正在获取历史财务趋势...');
-      const myUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=8&pageNumber=1&reportName=RPT_F10_FINANCE_MAINFINADATA&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
+      const myUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=12&pageNumber=1&reportName=RPT_F10_FINANCE_MAINFINADATA&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
       const myResp = await fetch(myUrl);
       const myResult = await myResp.json();
       if (myResult?.result?.data?.length) multiYearData = myResult.result.data;
     } catch (e) { console.log('历史趋势数据获取失败:', e); }
 
-    // ===== 6. 获取多期利润表（近4期，计算同比环比） =====
+    // ===== 6. 获取多期利润表（近8期，覆盖去年同期便于同比对照） =====
     let multiIncomeData = [];
     try {
       updateLoading('正在获取利润表趋势...');
-      const miUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=4&pageNumber=1&reportName=RPT_DMSK_FN_INCOME&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
+      const miUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=8&pageNumber=1&reportName=RPT_DMSK_FN_INCOME&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
       const miResp = await fetch(miUrl);
       const miResult = await miResp.json();
       if (miResult?.result?.data?.length) multiIncomeData = miResult.result.data;
     } catch (e) { console.log('多期利润表获取失败:', e); }
 
-    // ===== 7. 获取多期现金流量表（近4期） =====
+    // ===== 7. 获取多期现金流量表（近8期，覆盖去年同期） =====
     let multiCashflowData = [];
     try {
       updateLoading('正在获取现金流趋势...');
-      const mcUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=4&pageNumber=1&reportName=RPT_DMSK_FN_CASHFLOW&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
+      const mcUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=8&pageNumber=1&reportName=RPT_DMSK_FN_CASHFLOW&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
       const mcResp = await fetch(mcUrl);
       const mcResult = await mcResp.json();
       if (mcResult?.result?.data?.length) multiCashflowData = mcResult.result.data;
@@ -4403,9 +4411,59 @@ async function selectAnalysisReport(idx) {
   }
 }
 
+/** 报表行对应的报告日期 yyyy-mm-dd（用于往期匹配） */
+function parseFinanceReportDateStr(row) {
+  if (!row) return '';
+  const s = row.REPORT_DATE || row.REPORT_DATE_NAME || '';
+  const m = String(s).match(/(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : '';
+}
+
+/** 在多期数据中按「去年同期」对齐（日历同日减一年）匹配一行 */
+function findPriorYearSameFinanceRow(rows, currentRow) {
+  if (!rows?.length || !currentRow) return null;
+  const cur = parseFinanceReportDateStr(currentRow);
+  if (cur.length < 10) return null;
+  const parts = cur.split('-').map((x) => parseInt(x, 10));
+  const [y, mo, d] = parts;
+  const prevStr = `${y - 1}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  return rows.find((r) => parseFinanceReportDateStr(r) === prevStr) || null;
+}
+
+function parseFinanceMetricNum(v) {
+  if (v == null || v === '') return null;
+  const n = typeof v === 'number' ? v : parseFloat(String(v).replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
+function formatFinanceMoneyYiPlain(v) {
+  const n = parseFinanceMetricNum(v);
+  if (n === null) return '--';
+  return `${(n / 100000000).toFixed(2)}`;
+}
+
+/** 百分比型同比口径（当期与去年同期绝对额相比） */
+function formatFinancePctChangeCaption(currAbs, prevAbs) {
+  const c = parseFinanceMetricNum(currAbs);
+  const p = parseFinanceMetricNum(prevAbs);
+  if (c === null || p === null) return '--';
+  if (p === 0) return c === 0 ? '0%' : '+∞/不可比';
+  const pct = ((c - p) / Math.abs(p)) * 100;
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`;
+}
+
+/** 百分点差（毛利率、净利率、ROE 等已是百分数口径时使用） */
+function formatFinancePctPointCaption(currPct, prevPct) {
+  const c = parseFinanceMetricNum(currPct);
+  const p = parseFinanceMetricNum(prevPct);
+  if (c === null || p === null) return '--';
+  const d = c - p;
+  return `${d >= 0 ? '+' : ''}${d.toFixed(2)} pct`;
+}
+
 /**
  * 从接口数据构建结构化的财报文本，供 LLM 分析
- * 新增：多期历史数据、同比环比、实时行情、关键指标判断标准
+ * 新增：多期历史数据、同比环比、实时行情、关键指标判断标准、同期对比与波动归因提示
  */
 function buildFinancialReportText(stockName, reportDateName, finMain, income, balance, cashflow, multiYear, multiIncome, multiCashflow, quoteData) {
   let text = `# ${stockName} ${reportDateName || ''} 财务报告\n\n`;
@@ -4452,6 +4510,126 @@ function buildFinancialReportText(stockName, reportDateName, finMain, income, ba
     text += `- 每股资本公积: ${finMain.MGZBGJ ?? '--'} 元\n`;
     text += `- 每股盈余公积: ${finMain.MGYYGJ ?? '--'} 元\n`;
     text += `\n`;
+  }
+
+  // ===== 同期对比：本期 vs 去年同期（多期数据对齐 + 披露增速交叉验证） =====
+  if (finMain) {
+    const priorMain = findPriorYearSameFinanceRow(multiYear, finMain);
+    const priorIncome = income ? findPriorYearSameFinanceRow(multiIncome, income) : null;
+    const priorCfRow = cashflow ? findPriorYearSameFinanceRow(multiCashflow, cashflow) : null;
+
+    text += `## 同期对比数据（本期 vs 去年同期）\n`;
+    if (!priorMain) {
+      text += `> ⚠️ 未在已拉取的主要指标历史（最多12期）中匹配到与本期「日历对齐」的去年同期切片，仍可根据下方披露字段与趋势表做同比分析。\n\n`;
+      text += `| 披露口径 | 数值 |\n|----------|------|\n`;
+      text += `| 营收同比增长率 | ${finMain.TOTALOPERATEREVETZ ?? '--'}% |\n`;
+      text += `| 归母净利润同比增长率 | ${finMain.PARENTNETPROFITTZ ?? '--'}% |\n`;
+      text += `| 扣非净利润同比增长率 | ${finMain.DEDUCT_PARENT_NETPROFITTZ ?? '--'}% |\n\n`;
+    } else {
+      const pyLabel = priorMain.REPORT_DATE_NAME || parseFinanceReportDateStr(priorMain) || '去年同期';
+      text += `> 去年同期匹配报告期：**${pyLabel}**（与本期同日历对齐减一年）\n\n`;
+      text += `### 主要财务指标：同期绝对额对照\n`;
+      text += `| 项目 | 本期(亿元) | 去年同期(亿元) | 同比增减(计算) | 披露增速字段参考 |\n`;
+      text += `|------|------------|----------------|----------------|------------------|\n`;
+      const cellYi = (v) => {
+        const s = formatFinanceMoneyYiPlain(v);
+        return s === '--' ? '--' : s;
+      };
+      text += `| 营业收入 | ${cellYi(finMain.TOTALOPERATEREVE)} | ${cellYi(priorMain.TOTALOPERATEREVE)} | ${formatFinancePctChangeCaption(finMain.TOTALOPERATEREVE, priorMain.TOTALOPERATEREVE)} | ${finMain.TOTALOPERATEREVETZ ?? '--'}% |\n`;
+      text += `| 归母净利润 | ${cellYi(finMain.PARENTNETPROFIT)} | ${cellYi(priorMain.PARENTNETPROFIT)} | ${formatFinancePctChangeCaption(finMain.PARENTNETPROFIT, priorMain.PARENTNETPROFIT)} | ${finMain.PARENTNETPROFITTZ ?? '--'}% |\n`;
+      text += `| 扣非归母净利润 | ${cellYi(finMain.DEDUCT_PARENT_NETPROFIT)} | ${cellYi(priorMain.DEDUCT_PARENT_NETPROFIT)} | ${formatFinancePctChangeCaption(finMain.DEDUCT_PARENT_NETPROFIT, priorMain.DEDUCT_PARENT_NETPROFIT)} | ${finMain.DEDUCT_PARENT_NETPROFITTZ ?? '--'}% |\n`;
+      text += `\n`;
+      text += `| 比率项 | 本期 | 去年同期 | 百分点变化 |\n`;
+      text += `|--------|------|----------|------------|\n`;
+      text += `| 销售毛利率 | ${finMain.XSMLL ?? '--'}% | ${priorMain.XSMLL ?? '--'}% | ${formatFinancePctPointCaption(finMain.XSMLL, priorMain.XSMLL)} |\n`;
+      text += `| 销售净利率 | ${finMain.XSJLL ?? '--'}% | ${priorMain.XSJLL ?? '--'}% | ${formatFinancePctPointCaption(finMain.XSJLL, priorMain.XSJLL)} |\n`;
+      text += `| ROE(加权) | ${finMain.ROEJQ ?? '--'}% | ${priorMain.ROEJQ ?? '--'}% | ${formatFinancePctPointCaption(finMain.ROEJQ, priorMain.ROEJQ)} |\n`;
+      text += `| ROIC | ${finMain.ROIC ?? '--'}% | ${priorMain.ROIC ?? '--'}% | ${formatFinancePctPointCaption(finMain.ROIC, priorMain.ROIC)} |\n`;
+      text += `| 资产负债率 | ${finMain.ZCFZL ?? '--'}% | ${priorMain.ZCFZL ?? '--'}% | ${formatFinancePctPointCaption(finMain.ZCFZL, priorMain.ZCFZL)} |\n`;
+      text += `| 每股经营现金流(元) | ${finMain.MGJYXJJE ?? '--'} | ${priorMain.MGJYXJJE ?? '--'} | 同比 ${formatFinancePctChangeCaption(finMain.MGJYXJJE, priorMain.MGJYXJJE)} |\n`;
+      text += `\n`;
+    }
+
+    if (income && priorIncome) {
+      text += `### 利润表主要科目：同期对照（亿元）\n`;
+      text += `| 科目 | 本期 | 去年同期 | 同比增减(计算) |\n`;
+      text += `|------|------|----------|----------------|\n`;
+      const row = (label, k) =>
+        `| ${label} | ${formatFinanceMoneyYiPlain(income[k])} | ${formatFinanceMoneyYiPlain(priorIncome[k])} | ${formatFinancePctChangeCaption(income[k], priorIncome[k])} |\n`;
+      text += row('营业总收入', 'TOTAL_OPERATE_INCOME');
+      text += row('营业总成本', 'TOTAL_OPERATE_COST');
+      text += row('营业利润', 'OPERATE_PROFIT');
+      text += row('归母净利润', 'PARENT_NETPROFIT');
+      text += row('扣非归母净利润', 'DEDUCT_PARENT_NETPROFIT');
+      text += row('销售费用', 'SALE_EXPENSE');
+      text += row('管理费用', 'MANAGE_EXPENSE');
+      text += row('研发费用', 'RESEARCH_EXPENSE');
+      text += `\n`;
+    }
+
+    if (cashflow && priorCfRow) {
+      text += `### 现金流量表：同期对照（亿元）\n`;
+      text += `| 科目 | 本期 | 去年同期 | 同比增减(计算) |\n`;
+      text += `|------|------|----------|----------------|\n`;
+      const rowCf = (label, k) =>
+        `| ${label} | ${formatFinanceMoneyYiPlain(cashflow[k])} | ${formatFinanceMoneyYiPlain(priorCfRow[k])} | ${formatFinancePctChangeCaption(cashflow[k], priorCfRow[k])} |\n`;
+      text += rowCf('经营活动现金流净额', 'NETCASH_OPERATE');
+      text += rowCf('投资活动现金流净额', 'NETCASH_INVEST');
+      text += rowCf('筹资活动现金流净额', 'NETCASH_FINANCE');
+      text += rowCf('购建固定资产等(资本支出)', 'CONSTRUCT_LONG_ASSET');
+      text += `\n`;
+    }
+
+    const alerts = [];
+    const absNz = (v) => {
+      const x = parseFloat(v);
+      return Number.isFinite(x) ? Math.abs(x) : 0;
+    };
+    if (absNz(finMain.TOTALOPERATEREVETZ) >= 12) {
+      alerts.push(`营业收入同比增速 **${finMain.TOTALOPERATEREVETZ}%**（绝对值≥12%）`);
+    }
+    if (absNz(finMain.PARENTNETPROFITTZ) >= 12) {
+      alerts.push(`归母净利润同比增速 **${finMain.PARENTNETPROFITTZ}%**（绝对值≥12%）`);
+    }
+    if (absNz(finMain.DEDUCT_PARENT_NETPROFITTZ) >= 12) {
+      alerts.push(`扣非净利润同比增速 **${finMain.DEDUCT_PARENT_NETPROFITTZ}%**（绝对值≥12%）`);
+    }
+    if (priorMain) {
+      const pp = (a, b) => {
+        const x = parseFinanceMetricNum(a);
+        const y = parseFinanceMetricNum(b);
+        if (x === null || y === null) return 0;
+        return Math.abs(x - y);
+      };
+      if (pp(finMain.XSMLL, priorMain.XSMLL) >= 3) {
+        alerts.push(`毛利率变动 **${formatFinancePctPointCaption(finMain.XSMLL, priorMain.XSMLL)}**（|Δ|≥3pct）`);
+      }
+      if (pp(finMain.XSJLL, priorMain.XSJLL) >= 3) {
+        alerts.push(`净利率变动 **${formatFinancePctPointCaption(finMain.XSJLL, priorMain.XSJLL)}**（|Δ|≥3pct）`);
+      }
+      if (pp(finMain.ROEJQ, priorMain.ROEJQ) >= 3) {
+        alerts.push(`ROE(加权)变动 **${formatFinancePctPointCaption(finMain.ROEJQ, priorMain.ROEJQ)}**（|Δ|≥3pct）`);
+      }
+    }
+    if (priorCfRow && cashflow) {
+      const oc = parseFinanceMetricNum(cashflow.NETCASH_OPERATE);
+      const op = parseFinanceMetricNum(priorCfRow.NETCASH_OPERATE);
+      const npYoy = parseFloat(finMain.PARENTNETPROFITTZ);
+      if (oc != null && op != null && op !== 0 && Number.isFinite(npYoy)) {
+        const ocfYoyPct = ((oc - op) / Math.abs(op)) * 100;
+        if (Math.abs(ocfYoyPct - npYoy) > 35) {
+          alerts.push(`经营现金流净额同比约 **${ocfYoyPct.toFixed(1)}%**，与归母净利润同比 **${npYoy}%** 偏离较大，请分析营运资本、减值与非现金项目`);
+        }
+      }
+    }
+
+    text += `### 系统自动标记的同比显著波动（须在第一章末做原因归因）\n`;
+    if (alerts.length === 0) {
+      text += `未触及默认数值阈值，仍请结合上表对主要指标的同比变化做业务解释。\n\n`;
+    } else {
+      alerts.forEach((a) => { text += `- ${a}\n`; });
+      text += `\n`;
+    }
   }
 
   // ===== 利润表 =====
@@ -4591,7 +4769,7 @@ function buildFinancialReportText(stockName, reportDateName, finMain, income, ba
     text += `## 近期财务指标趋势\n`;
     text += `| 报告期 | EPS | 每股净资产 | 毛利率 | 净利率 | ROE(加权) | ROIC | 营收增速 | 净利增速 | 扣非净利增速 | 负债率 | 流动比率 |\n`;
     text += `|--------|-----|-----------|--------|--------|-----------|------|----------|----------|-------------|--------|----------|\n`;
-    multiYear.slice(0, 8).forEach(r => {
+    multiYear.slice(0, 12).forEach(r => {
       text += `| ${r.REPORT_DATE_NAME || r.REPORT_DATE?.substring(0,10) || '--'} `;
       text += `| ${r.EPSJB ?? '--'} `;
       text += `| ${r.BPS ?? '--'} `;
@@ -4613,7 +4791,7 @@ function buildFinancialReportText(stockName, reportDateName, finMain, income, ba
     text += `## 近期利润表趋势\n`;
     text += `| 报告期 | 营业总收入 | 营业总成本 | 营业利润 | 归母净利润 | 扣非归母净利润 | 销售费用 | 管理费用 | 研发费用 | 营收增速 | 净利增速 |\n`;
     text += `|--------|-----------|-----------|---------|-----------|---------------|---------|---------|---------|---------|--------|\n`;
-    multiIncome.slice(0, 4).forEach(r => {
+    multiIncome.slice(0, 8).forEach(r => {
       const fmtYi = (v) => {
         if (v == null || v === '') return '--';
         const n = parseFloat(v);
@@ -4640,7 +4818,7 @@ function buildFinancialReportText(stockName, reportDateName, finMain, income, ba
     text += `## 近期现金流量趋势\n`;
     text += `| 报告期 | 经营CF净额 | 投资CF净额 | 筹资CF净额 | 资本支出 | 分配股利 |\n`;
     text += `|--------|-----------|-----------|-----------|---------|---------|\n`;
-    multiCashflow.slice(0, 4).forEach(r => {
+    multiCashflow.slice(0, 8).forEach(r => {
       const fmtYi = (v) => {
         if (v == null || v === '') return '--';
         const n = parseFloat(v);
