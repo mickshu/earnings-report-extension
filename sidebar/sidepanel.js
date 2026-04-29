@@ -315,11 +315,20 @@ const ANALYSIS_SYSTEM_PROMPT = `你是一位资深的行业财报解读专家，
 
 **同期对比**：必须综合利用下方「同期对比数据（本期 vs 去年同期）」与各表中的同比增速字段；若数据中已给出去年同期绝对额，不得在解读中省略同比结论。
 
-**关键指标波动原因分析**：对在「系统自动标记的同比显著波动」中出现的指标（或任一同比变动幅度超过：**营收/净利绝对值≥12%**，或 **毛利率、净利率、ROE 变动≥3 个百分点**，或 **经营现金流同比大幅偏离净利增速**），在「第一章」末尾单独增加小节 **「关键财务指标波动与原因归因」**，对每个命中指标写出：
+**关键指标波动原因分析**：对在「系统自动标记的同比显著波动」中出现的指标（或任一同比变动幅度超过：**营收/净利绝对值≥12%**，或 **毛利率、净利率、ROE 变动≥3 个百分点**，或 **经营现金流同比大幅偏离净利增速**，或 **应收账款/存货增速远超营收增速**，或 **商誉大幅变动**，或 **短期借款/货币资金大幅增减**，或 **合同负债大幅变动**，或 **总负债增速远超总资产增速**），在「第一章」末尾单独增加小节 **「关键财务指标波动与原因归因」**，对每个命中指标写出：
 1) 变动的量化描述（本期 vs 去年同期 + 口径说明）
 2) 至少 **2 条** 可能成因，区分为：经营实质（量价、结构、费率）/ **一次性或非经常**（政府补助、减值、公允价值、投资收益等）/ 行业与宏观因素
 3) 若为推断，标明「推断」并简述依据。
 若用户提供文本中缺乏细分科目，则说明基于可比数据能做的边界，不得编造明细。
+
+**资产负债表健康度分析**：若下方数据中给出「资产负债表：同期对照」表，必须对以下关键科目做同比分析并给出健康度判断：
+- 应收账款：增速 vs 营收增速（应收增速>营收增速=回款恶化红旗）
+- 存货：增速 vs 营收增速（存货增速>营收增速=滞销/跌价风险）
+- 商誉：同比变动（减值风险/并购扩张判断）
+- 短期借款+长期借款：总负债结构变化（去杠杆/加杠杆判断）
+- 货币资金：同比变动及与经营现金流匹配度
+- 合同负债：同比变动（预示未来收入趋势）
+- 商誉/总资产比例（>20%为高风险红旗）
 
 **三大现金流关系分析**：必须根据「三大现金流关系分析小结」中的类型判断和结论，在核心业绩概览中做现金流类型定性（如"成熟奶牛型""扩张成长型"等），并评价：
 - 经营CF/归母净利润比率 → 盈利质量（≥1.0为优秀，0.7-1.0为一般，<0.7为较差）
@@ -4577,6 +4586,58 @@ function buildFinancialReportText(stockName, reportDateName, finMain, income, ba
       text += rowCf('投资活动现金流净额', 'NETCASH_INVEST');
       text += rowCf('筹资活动现金流净额', 'NETCASH_FINANCE');
       text += rowCf('购建固定资产等(资本支出)', 'CONSTRUCT_LONG_ASSET');
+      text += rowCf('分配股利、利润或偿付利息支付的现金', 'DIVIDEND_CASH');
+      text += rowCf('取得借款收到的现金', 'BORROW_CASH');
+      text += rowCf('偿还债务支付的现金', 'REPAY_CASH');
+      text += `\n`;
+    }
+
+    // ===== 资产负债表：同期对照 =====
+    const priorBalance = balance ? findPriorYearSameFinanceRow(multiYear, balance) : null;
+    if (balance && priorBalance) {
+      text += `### 资产负债表：同期对照（亿元）\n`;
+      text += `| 科目 | 本期 | 去年同期 | 同比增减(计算) |\n`;
+      text += `|------|------|----------|----------------|\n`;
+      const rowBs = (label, k) =>
+        `| ${label} | ${formatFinanceMoneyYiPlain(balance[k])} | ${formatFinanceMoneyYiPlain(priorBalance[k])} | ${formatFinancePctChangeCaption(balance[k], priorBalance[k])} |\n`;
+      text += rowBs('总资产', 'TOTAL_ASSETS');
+      text += rowBs('总负债', 'TOTAL_LIABILITIES');
+      text += rowBs('所有者权益合计', 'TOTAL_EQUITY');
+      text += rowBs('归母所有者权益', 'PARENT_EQUITY');
+      text += rowBs('货币资金', 'MONETARYFUNDS');
+      text += rowBs('交易性金融资产', 'TRADING_FIN_ASSET');
+      text += rowBs('应收账款', 'ACCOUNTS_RECE');
+      text += rowBs('应收票据', 'NOTES_RECE');
+      text += rowBs('预付款项', 'PREPAYMENT');
+      text += rowBs('存货', 'INVENTORY');
+      text += rowBs('其他应收款', 'OTHER_RECE');
+      text += rowBs('固定资产', 'FIXED_ASSET');
+      text += rowBs('在建工程', 'CONSTRUCT_PRODUCT');
+      text += rowBs('无形资产', 'INTANGIBLE_ASSET');
+      text += rowBs('商誉', 'GOODWILL');
+      text += rowBs('短期借款', 'SHORT_LOAN');
+      text += rowBs('长期借款', 'LONG_LOAN');
+      text += rowBs('应付债券', 'BONDS_PAYABLE');
+      text += rowBs('合同负债', 'CONTRACT_LIAB');
+      text += rowBs('应付账款', 'ACCOUNTS_PAYABLE');
+      text += rowBs('租赁负债', 'LEASE_LIAB');
+      text += `\n`;
+    } else if (balance && !priorBalance) {
+      text += `### 资产负债表：同期对照（亿元）\n`;
+      text += `> ⚠️ 未匹配到去年同期资产负债表切片，仅列示本期数据。\n\n`;
+      text += `| 科目 | 本期(亿元) |\n`;
+      text += `|------|------------|\n`;
+      const rowBsCur = (label, k) =>
+        `| ${label} | ${formatFinanceMoneyYiPlain(balance[k])} |\n`;
+      text += rowBsCur('总资产', 'TOTAL_ASSETS');
+      text += rowBsCur('总负债', 'TOTAL_LIABILITIES');
+      text += rowBsCur('所有者权益合计', 'TOTAL_EQUITY');
+      text += rowBsCur('货币资金', 'MONETARYFUNDS');
+      text += rowBsCur('应收账款', 'ACCOUNTS_RECE');
+      text += rowBsCur('存货', 'INVENTORY');
+      text += rowBsCur('商誉', 'GOODWILL');
+      text += rowBsCur('短期借款', 'SHORT_LOAN');
+      text += rowBsCur('长期借款', 'LONG_LOAN');
       text += `\n`;
     }
 
@@ -4620,6 +4681,75 @@ function buildFinancialReportText(stockName, reportDateName, finMain, income, ba
         if (Math.abs(ocfYoyPct - npYoy) > 35) {
           alerts.push(`经营现金流净额同比约 **${ocfYoyPct.toFixed(1)}%**，与归母净利润同比 **${npYoy}%** 偏离较大，请分析营运资本、减值与非现金项目`);
         }
+      }
+    }
+
+    // ===== 资产负债表波动检测 =====
+    if (balance && priorBalance) {
+      const pp = (a, b) => {
+        const x = parseFinanceMetricNum(a);
+        const y = parseFinanceMetricNum(b);
+        if (x === null || y === null) return null;
+        if (y === 0) return x === 0 ? 0 : null;
+        return ((x - y) / Math.abs(y)) * 100;
+      };
+
+      // 应收账款增速 vs 营收增速
+      const arYoyPct = pp(balance.ACCOUNTS_RECE, priorBalance.ACCOUNTS_RECE);
+      const revYoy = parseFloat(finMain.TOTALOPERATEREVETZ);
+      if (arYoyPct != null && Number.isFinite(revYoy)) {
+        if (arYoyPct > 30 && arYoyPct > revYoy + 15) {
+          alerts.push(`应收账款同比 **+${arYoyPct.toFixed(1)}%**，远超营收增速（${revYoy}%），请分析回款质量、信用政策与坏账风险`);
+        } else if (arYoyPct < -15) {
+          alerts.push(`应收账款同比 **${arYoyPct.toFixed(1)}%**，大幅下降，请分析是否加强催收或信用政策收紧`);
+        }
+      }
+
+      // 存货增速 vs 营收增速
+      const invYoyPct = pp(balance.INVENTORY, priorBalance.INVENTORY);
+      if (invYoyPct != null && Number.isFinite(revYoy)) {
+        if (invYoyPct > 30 && invYoyPct > revYoy + 15) {
+          alerts.push(`存货同比 **+${invYoyPct.toFixed(1)}%**，远超营收增速，请分析是否面临滞销、跌价或备货策略变化`);
+        } else if (invYoyPct < -15) {
+          alerts.push(`存货同比 **${invYoyPct.toFixed(1)}%**，大幅下降，请分析是否去库存或产能收缩`);
+        }
+      }
+
+      // 商誉变动（减值信号）
+      const gwYoyPct = pp(balance.GOODWILL, priorBalance.GOODWILL);
+      if (gwYoyPct != null && gwYoyPct < -5) {
+        alerts.push(`商誉同比 **${gwYoyPct.toFixed(1)}%**，存在减值迹象，请分析并购标的是否业绩不达预期`);
+      } else if (gwYoyPct != null && gwYoyPct > 20) {
+        alerts.push(`商誉同比 **+${gwYoyPct.toFixed(1)}%**，大幅增加，请分析是否有新并购事项及商誉规模合理性`);
+      }
+
+      // 短期借款变动
+      const slYoyPct = pp(balance.SHORT_LOAN, priorBalance.SHORT_LOAN);
+      if (slYoyPct != null && slYoyPct > 40) {
+        alerts.push(`短期借款同比 **+${slYoyPct.toFixed(1)}%**，大幅增加，请分析融资需求与偿债压力`);
+      } else if (slYoyPct != null && slYoyPct < -30) {
+        alerts.push(`短期借款同比 **${slYoyPct.toFixed(1)}%**，大幅减少，请分析是否主动去杠杆或融资渠道收紧`);
+      }
+
+      // 货币资金变动
+      const cashYoyPct = pp(balance.MONETARYFUNDS, priorBalance.MONETARYFUNDS);
+      if (cashYoyPct != null && cashYoyPct < -30) {
+        alerts.push(`货币资金同比 **${cashYoyPct.toFixed(1)}%**，大幅减少，请分析资金去向（投资/还债/经营消耗）`);
+      }
+
+      // 合同负债变动（预示未来收入）
+      const clYoyPct = pp(balance.CONTRACT_LIAB, priorBalance.CONTRACT_LIAB);
+      if (clYoyPct != null && clYoyPct > 30) {
+        alerts.push(`合同负债同比 **+${clYoyPct.toFixed(1)}%**，大幅增加，预示在手订单/预收款增长，关注未来收入转化`);
+      } else if (clYoyPct != null && clYoyPct < -20) {
+        alerts.push(`合同负债同比 **${clYoyPct.toFixed(1)}%**，大幅下降，请分析订单是否萎缩或收入确认加速`);
+      }
+
+      // 总资产 vs 总负债增速对比
+      const taYoyPct = pp(balance.TOTAL_ASSETS, priorBalance.TOTAL_ASSETS);
+      const tlYoyPct = pp(balance.TOTAL_LIABILITIES, priorBalance.TOTAL_LIABILITIES);
+      if (taYoyPct != null && tlYoyPct != null && tlYoyPct > taYoyPct + 15) {
+        alerts.push(`总负债增速（**${tlYoyPct.toFixed(1)}%**）远超总资产增速（${taYoyPct.toFixed(1)}%），请分析杠杆率上升趋势`);
       }
     }
 
