@@ -5198,13 +5198,14 @@ async function refreshReportList() {
       el.innerHTML = `<div class="report-list-empty">${emptyText}</div>`;
       return;
     }
-    // 按时间倒序
-    items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    // 按时间倒序（createdAt 为 Date.now() 数字时间戳）
+    items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    const styleNames = { default: '综合大师', zhang: '张氏分析', masters: '大师', buffett: '巴菲特', lynch: '林奇', fisher: '费雪', munger: '芒格' };
     el.innerHTML = items.map(r => `
       <div class="report-item" data-id="${r.id}">
         <div class="report-item-info">
           <span class="report-item-company">${r.company || '未知'}</span>
-          <span class="report-item-meta">${r.date || ''}${r.style ? ' · ' + r.style : ''}</span>
+          <span class="report-item-meta">${r.date || ''}${r.style ? ' · ' + (styleNames[r.style] || r.style) : ''}</span>
         </div>
         <div class="report-item-actions">
           <button class="report-item-btn report-view-btn" data-id="${r.id}" title="查看">👁</button>
@@ -5669,22 +5670,25 @@ function saveReportToDisk(type, company, markdown) {
   const date = new Date().toISOString().slice(0, 10);
   const safeName = company.replace(/[\\/:*?"<>|]/g, '');
   const filename = `${safeName}_${date}.md`;
-  const fullPath = `/Users/mickshu/分析报告/${subDir}/${filename}`;
+  // chrome.downloads.download filename 必须是相对路径（相对于默认下载目录）
+  const relativePath = `分析报告/${subDir}/${filename}`;
 
   const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
 
   chrome.downloads.download({
-    url, filename: fullPath,
+    url, filename: relativePath,
     conflictAction: 'uniquify', saveAs: false
-  }, () => {
+  }, (downloadId) => {
     if (chrome.runtime.lastError) {
-      console.warn('磁盘保存失败:', chrome.runtime.lastError);
+      console.warn('磁盘保存失败:', chrome.runtime.lastError.message);
+    } else {
+      console.log('报告已保存, downloadId:', downloadId);
     }
     setTimeout(() => URL.revokeObjectURL(url), 3000);
   });
 
-  return { subDir, filename, fullPath };
+  return { subDir, filename, relativePath };
 }
 
 function exportMarkdown(type = 'report') {
