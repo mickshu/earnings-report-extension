@@ -390,6 +390,16 @@
           </div>
         </div>
 
+        <!-- 解读风格选择 -->
+        <div class="analysis-style-selector">
+          <span class="analysis-style-label">解读风格</span>
+          <div class="analysis-style-chips">
+            <button class="analysis-style-chip active" data-style="default">🔮 综合大师视角</button>
+            <button class="analysis-style-chip" data-style="zhang">📐 张氏财务分析</button>
+          </div>
+          <p id="analysis-style-hint" class="analysis-style-hint">当前：综合大师视角解读</p>
+        </div>
+
         <!-- 财报列表区 -->
         <div id="analysis-report-list" class="analysis-report-list" style="display:none">
           <div class="analysis-report-list-header">
@@ -428,6 +438,7 @@
       <div id="loading" class="loading-state" style="display:none">
         <div class="spinner"></div>
         <p id="loading-text">正在提取 PDF 文本内容...</p>
+        <button id="btn-stop-analysis" class="btn btn-stop" style="display:none">⏹ 停止分析</button>
       </div>
 
       <!-- 分析结果 -->
@@ -700,6 +711,7 @@
         <button class="settings-sub-tab active" data-subtab="llm">🤖 大模型配置</button>
         <button class="settings-sub-tab" data-subtab="watchlist">⭐ 关注公司</button>
         <button class="settings-sub-tab" data-subtab="datamgmt">💾 数据管理</button>
+        <button class="settings-sub-tab" data-subtab="reports">📁 报告管理</button>
       </nav>
       
       <div class="settings-content">
@@ -821,6 +833,33 @@
           </div>
           
           <div id="settings-status" class="settings-status"></div>
+        </div>
+        
+        <!-- ===== 报告管理子面板 ===== -->
+        <div id="settings-reports-panel" class="settings-sub-panel">
+          <div class="report-stats-bar">
+            <span id="report-stats-text">加载中...</span>
+          </div>
+
+          <div class="report-dir-info">
+            存储目录：<code>~/分析报告/</code>
+          </div>
+
+          <!-- 财报解读 -->
+          <div class="setting-group">
+            <label class="setting-label">财报解读</label>
+            <div id="report-list-financial" class="report-list">
+              <div class="report-list-empty">暂无财报解读报告</div>
+            </div>
+          </div>
+
+          <!-- 股票分析 -->
+          <div class="setting-group">
+            <label class="setting-label">股票分析</label>
+            <div id="report-list-stock" class="report-list">
+              <div class="report-list-empty">暂无股票分析报告</div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

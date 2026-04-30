@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>报告查看器</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-dark: #174ea6;
+      --primary-light: #e8f0fe;
+      --text: #202124;
+      --text-secondary: #5f6368;
+      --text-tertiary: #80868b;
+      --border: #dadce0;
+      --bg: #ffffff;
+      --surface: #f8f9fa;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    /* Header */
+    .viewer-header {
+      position: sticky; top: 0; z-index: 10;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+    .viewer-header-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .viewer-title { font-size: 16px; font-weight: 600; color: var(--text); }
+    .viewer-badge {
+      font-size: 11px; background: var(--primary-light); color: var(--primary);
+      padding: 2px 8px; border-radius: 4px; font-weight: 500;
+    }
+    .viewer-date { font-size: 12px; color: var(--text-secondary); }
+    .viewer-style { font-size: 11px; color: var(--text-tertiary); }
+    .viewer-actions { display: flex; gap: 8px; }
+    .viewer-actions button {
+      padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+      background: var(--bg); color: var(--text-secondary); font-size: 12px;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .viewer-actions button:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* Report content */
+    .viewer-content {
+      max-width: 900px; margin: 0 auto;
+      padding: 24px 32px 60px;
+      font-size: 14px; line-height: 1.8;
+    }
+    .viewer-content h1, .viewer-content h2, .viewer-content h3 {
+      margin-top: 24px; margin-bottom: 12px; color: var(--text);
+    }
+    .viewer-content h1 { font-size: 22px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
+    .viewer-content h2 { font-size: 18px; color: var(--primary-dark); }
+    .viewer-content h3 { font-size: 15px; }
+    .viewer-content table {
+      width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px;
+    }
+    .viewer-content th, .viewer-content td {
+      border: 1px solid var(--border); padding: 8px 12px; text-align: left;
+    }
+    .viewer-content th {
+      background: var(--primary-light); font-weight: 600; white-space: nowrap;
+    }
+    .viewer-content tr:nth-child(even) { background: #fafafa; }
+    .viewer-content blockquote {
+      border-left: 3px solid var(--primary); padding: 10px 14px; margin: 12px 0;
+      background: #f8f9fa; color: var(--text-secondary); font-style: italic;
+    }
+    .viewer-content ul, .viewer-content ol { padding-left: 24px; margin: 10px 0; }
+    .viewer-content li { margin: 4px 0; }
+    .viewer-content strong { color: var(--primary-dark); }
+    .viewer-content code {
+      background: #f1f3f4; padding: 2px 6px; border-radius: 3px; font-size: 13px;
+    }
+    .viewer-content pre { background: #f1f3f4; padding: 12px; border-radius: 6px; overflow-x: auto; margin: 12px 0; }
+    .viewer-content pre code { background: none; padding: 0; }
+    .viewer-content hr { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+    .viewer-content p { margin: 8px 0; }
+
+    /* Error / Empty */
+    .viewer-error {
+      text-align: center; padding: 60px 24px; color: var(--text-tertiary); font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header class="viewer-header">
+    <div class="viewer-header-info">
+      <span class="viewer-title" id="viewer-title">报告查看器</span>
+      <span class="viewer-badge" id="viewer-code"></span>
+      <span class="viewer-date" id="viewer-date"></span>
+      <span class="viewer-style" id="viewer-style"></span>
+    </div>
+    <div class="viewer-actions">
+      <button id="btn-copy" title="复制内容">📋 复制</button>
+      <button id="btn-export" title="导出Markdown">💾 导出</button>
+    </div>
+  </header>
+  <article class="viewer-content" id="viewer-content">
+    <div class="viewer-error">正在加载报告...</div>
+  </article>
+
+  <script>
+    // Markdown 渲染器（从 sidepanel.js 复制）
+    function renderMarkdown(text) {
+      if (!text) return '';
+      let html = text
+        .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="lang-$1">$2</code></pre>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^---$/gm, '<hr>')
+        .replace(/^- (.+)$/gm, '<li>$1</li>')
+        .replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+      html = renderTables(html);
+      html = html.replace(/((?:<li>.*<\/li>\n?)+)/g, '<ul>$1</ul>');
+      html = html.replace(/^(?!<[hupblo]|<li|<hr|<pre|<code|<table|<thead|<tbody|<tr|<td|<th|<strong|<em|<blockquote)(.+)$/gm, '<p>$1</p>');
+      return html;
+    }
+
+    function renderTables(html) {
+      const tableRegex = /(\|.+\|)\n(\|[-:| ]+\|)\n((?:\|.+\|\n?)+)/g;
+      return html.replace(tableRegex, (match, headerRow, separatorRow, bodyRows) => {
+        const headers = headerRow.split('|').filter(c => c.trim()).map(c => c.trim());
+        const rows = bodyRows.trim().split('\n').map(row =>
+          row.split('|').filter(c => c.trim()).map(c => c.trim())
+        );
+        let table = '<table><thead><tr>';
+        headers.forEach(h => { table += `<th>${h}</th>`; });
+        table += '</tr></thead><tbody>';
+        rows.forEach(row => {
+          table += '<tr>';
+          row.forEach(cell => { table += `<td>${cell}</td>`; });
+          table += '</tr>';
+        });
+        table += '</tbody></table>';
+        return table;
+      });
+    }
+
+    // 从 URL 参数获取报告ID
+    const params = new URLSearchParams(window.location.search);
+    const reportId = params.get('id');
+    let currentReport = null;
+
+    if (!reportId) {
+      document.getElementById('viewer-content').innerHTML = '<div class="viewer-error">未指定报告ID</div>';
+    } else {
+      chrome.storage.local.get('er_saved_reports', (result) => {
+        const data = result['er_saved_reports'];
+        if (!data || !Array.isArray(data.reports)) {
+          document.getElementById('viewer-content').innerHTML = '<div class="viewer-error">无法加载报告数据</div>';
+          return;
+        }
+        currentReport = data.reports.find(r => r.id === reportId);
+        if (!currentReport) {
+          document.getElementById('viewer-content').innerHTML = '<div class="viewer-error">该报告已被删除或不存在</div>';
+          return;
+        }
+
+        // 渲染报告
+        const typeLabel = currentReport.type === 'financial' ? '财报解读' : '股票分析';
+        const styleName = {
+          default: '综合大师视角', zhang: '张氏财务分析',
+          masters: '七大师综合', buffett: '巴菲特', lynch: '林奇',
+          fisher: '费雪', munger: '芒格', marks: '马克斯',
+          duanyongping: '段永平', dalio: '达利欧'
+        }[currentReport.style] || currentReport.style;
+
+        document.title = `${typeLabel} - ${currentReport.company}`;
+        document.getElementById('viewer-title').textContent = `${typeLabel} - ${currentReport.company}`;
+        document.getElementById('viewer-code').textContent = currentReport.code;
+        document.getElementById('viewer-date').textContent = currentReport.date;
+        document.getElementById('viewer-style').textContent = styleName;
+        document.getElementById('viewer-content').innerHTML = renderMarkdown(currentReport.content);
+      });
+    }
+
+    // 复制按钮
+    document.getElementById('btn-copy').addEventListener('click', () => {
+      if (!currentReport) return;
+      navigator.clipboard.writeText(currentReport.content).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.textContent = '✅ 已复制';
+        setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
+      });
+    });
+
+    // 导出按钮
+    document.getElementById('btn-export').addEventListener('click', () => {
+      if (!currentReport) return;
+      const blob = new Blob([currentReport.content], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${currentReport.company}_${currentReport.date}.md`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    });
+  </script>
+</body>
+</html>

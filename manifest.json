@@ -23,7 +23,8 @@
     {
       "resources": [
         "lib/pdf.min.js",
-        "lib/pdf.worker.min.js"
+        "lib/pdf.worker.min.js",
+        "sidebar/viewer.html"
       ],
       "matches": ["<all_urls>"]
     }

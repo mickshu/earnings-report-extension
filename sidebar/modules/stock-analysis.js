@@ -443,6 +443,22 @@ async function runStockAnalysis() {
     if (result) {
       state.saMarkdown = result;
       renderSAReport(result);
+
+      // 自动保存报告
+      const company = state.saStock?.name || '未知公司';
+      const code = state.saStock?.code || '';
+      saveReportToDisk('stock', company, result);
+      ReportStorage.save({
+        id: `rpt_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        type: 'stock',
+        company, code,
+        date: new Date().toISOString().slice(0, 10),
+        style: state.saAnalysisStyle || 'masters',
+        content: result,
+        diskPath: `分析报告/股票分析/${company.replace(/[\\/:*?"<>|]/g, '')}_${new Date().toISOString().slice(0, 10)}.md`,
+        createdAt: Date.now()
+      }).catch(e => console.warn('报告存储失败:', e));
+
       $('#sa-loading').style.display = 'none';
       $('#sa-result').style.display = '';
       buildTOC();

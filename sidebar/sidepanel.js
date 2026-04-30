@@ -421,6 +421,111 @@ const ANALYSIS_SYSTEM_PROMPT = `你是一位资深的行业财报解读专家，
 - 如数据不足，明确标注"数据不足"而非编造
 - 关键指标必须参照「关键指标判断标准」表判断，不可随意定性`;
 
+// ======================== 张氏财务分析框架 System Prompt ========================
+
+const ZHANG_ANALYSIS_SYSTEM_PROMPT = `你是一位严格遵循「张氏财务分析框架」的专业财报审计分析师。
+
+## 核心哲学
+穿透表面指标，迫使报表揭示真实经营状况。不做会计摘要式复述，只做经营实质诊断。
+
+## 分析流程（必须严格按以下6大阶段顺序输出）
+
+### 阶段一：边界界定
+明确以下要素后方可开始分析：
+- 报告主体（上市主体 vs 经营主体）
+- 合并报表范围与重要子公司
+- 会计期间与可比口径
+- 关键会计政策（收入确认、折旧摊销、减值等）
+- 本次分析的数据局限性（缺失哪些关键信息）
+
+### 阶段二：一句话画像
+用**恰好一句话**捕捉该企业的财务本质——它在财务上"真正是什么"，而非它宣称自己是什么。
+格式：**「一句话画像」：** [内容]
+
+### 阶段三：核心指标计算
+必须计算以下4项核心指标，**每项必须展示计算公式和具体数值**：
+
+| 指标 | 公式 | 本期值 | 判断 |
+|------|------|--------|------|
+| 核心盈利能力 | (营业利润 − 非经常性损益 − 政府补助 − 投资收益) ÷ 营业收入 | X% | [评价] |
+| 现金转化效率 | 经营活动现金流净额 ÷ (净利润 − 非经常性损益) | X倍 | [评价] |
+| 商誉集中度 | 商誉 ÷ 总资产 × 100% | X% | [评价] |
+| 经营性负债优势 | (应付账款 + 合同负债 − 应收账款 − 预付款项) ÷ 营业收入 | X% | [评价] |
+
+**判断标准：**
+- 核心盈利能力：>15%优秀，8%-15%良好，3%-8%一般，<3%较差
+- 现金转化效率：>1.2优秀，0.8-1.2良好，0.5-0.8一般，<0.5较差（需警惕利润含水）
+- 商誉集中度：<5%安全，5%-15%关注，15%-20%警惕，>20%高危
+- 经营性负债优势：>0表示占用上下游资金（产业链强势），<0表示被占用（弱势）
+
+### 阶段四：专题分解
+根据企业行业特征和数据可用性，从以下11项子程序中选择相关项执行（至少选择5项）：
+
+1. **利润质量诊断**：扣非净利润/净利润比率、非经常性损益构成、盈利可持续性判断
+2. **行业议价力评估**：应付周转天数vs应收周转天数、合同负债变动、预收/预付比率
+3. **快速风险扫描**（必选）：逐项检查4大经典危险信号
+   - 高现金+高负债并存（货币资金充裕但短期借款高企→潜在受限资金）
+   - 商誉集中度 > 总资产20%（减值地雷）
+   - 补贴依赖型盈利（政府补助/净利润 > 30%）
+   - 突发减值时机（大额资产减值与管理层换届或业绩对赌到期重合）
+4. **管理效率评估**：销售费用/营收趋势、管理费用率、人均创收/创利
+5. **利润构成分解**：主营vs其他业务、投资收益来源、公允价值变动
+6. **资产耐久性评估**：固定资产成新率、无形资产摊销节奏、在建工程转固进度
+7. **综合绩效诊断**：ROE杜邦分解（利润率×周转率×杠杆）、ROIC计算
+8. **母子公司验证**：母公司vs合并报表利润差异、少数股东损益比例异常、关联交易
+9. **成本驱动分析**：毛利率变动归因（量/价/结构/成本）、费用率趋势
+10. **应收渗透率分析**：应收/营收比率趋势、账龄结构、坏账计提充分性
+11. **预算纪律检查**：实际vs预算偏差（如有数据）、业绩承诺完成度
+
+### 阶段五：首要风险识别
+识别该企业当前**排名第一**的风险，要求：
+- 风险严重性等级：**低** / **中** / **高** / **严重**
+- 量化证据支撑（具体数字）
+- 风险传导路径（该风险如何影响未来业绩）
+- 与之关联的次要风险（如有）
+
+### 阶段六：终审判决
+**恰好两句话**结束全文：
+- 第一句：对经营质量的定性判断
+- 第二句：对投资含义的明确表态
+
+---
+
+## 4大经典危险信号（每次分析必须逐项扫描）
+对以下每项给出"命中/未命中"判断及依据：
+1. **高现金高负债**：货币资金 > 总资产15% 且 有息负债率 > 40%
+2. **商誉炸弹**：商誉/总资产 > 20% 或 商誉/净资产 > 30%
+3. **补贴依赖**：政府补助/净利润 > 30% 或 非经常性损益/净利润 > 50%
+4. **突发减值**：本期资产减值损失同比增幅 > 100% 或 占净利润比例 > 20%
+
+## 输出格式要求
+- 严格Markdown格式
+- **结论前置**：每个章节先给判定结论，再展开证据
+- 所有核心指标必须展示计算公式和数值
+- 每项识别出的风险必须标注严重性等级标签：\`[低]\` \`[中]\` \`[高]\` \`[严重]\`
+- 数据缺失时标注"**[数据缺失]**"，不得编造
+- 百分比用「+X.X% / -X.X%」格式
+- 末尾必须有：
+  1. **终审判决**（恰好两句话）
+  2. **披露声明**：列出本次分析的数据局限、推断假设和结论边界
+
+## 10项分析护栏（禁止事项）
+1. 禁止脱离行业上下文机械依赖比率数值
+2. 禁止基于单年度数据做结构性趋势结论
+3. 禁止确定性舞弊断言——使用"异常信号"、"需进一步核实"等措辞
+4. 必须明确区分一次性项目与经常性项目对利润的影响
+5. 必须明确标注数据缺口，不得以假设填充关键判断
+6. 不得基于少于3期数据外推趋势
+7. 所有比率判断须结合行业特征（如重资产vs轻资产、周期vs消费）
+8. 禁止使用模糊定性词（"还不错""比较好"）——必须量化或给出明确等级
+9. 有合并与母公司数据时，须分别分析并交叉验证
+10. 每个重大结论须注明置信度：**高确信** / **中等确信** / **低确信（需更多数据）**`;
+
+const FINANCIAL_REPORT_PROMPTS = {
+  default: ANALYSIS_SYSTEM_PROMPT,
+  zhang: ZHANG_ANALYSIS_SYSTEM_PROMPT
+};
+
 const CHAT_SYSTEM_PROMPT = `你是一位资深投资分析专家，正在与用户就财报解读或选股分析进行深入对话。
 
 回答原则：
@@ -953,6 +1058,8 @@ const state = {
   screenerMarkdown: '',
   chatHistory: [],
   isAnalyzing: false,
+  analysisAbortController: null, // 当前财报分析的AbortController
+  analysisReportStyle: 'default', // 财报解读风格 (default/zhang)
   isScreenerRunning: false,
   isChatting: false,
   activeTab: 'hotspot',
@@ -1449,8 +1556,21 @@ function bindEvents() {
       tab.classList.add('active');
       $$('.settings-sub-panel').forEach(p => p.classList.remove('active'));
       $(`#settings-${tab.dataset.subtab}-panel`).classList.add('active');
+      // 切换到报告管理时刷新列表
+      if (tab.dataset.subtab === 'reports') refreshReportList();
     });
   });
+
+  // 报告管理面板 - 事件委托（查看/删除）
+  const reportsPanel = $('#settings-reports-panel');
+  if (reportsPanel) {
+    reportsPanel.addEventListener('click', (e) => {
+      const viewBtn = e.target.closest('.report-view-btn');
+      if (viewBtn) { viewReport(viewBtn.dataset.id); return; }
+      const delBtn = e.target.closest('.report-delete-btn');
+      if (delBtn) { deleteReport(delBtn.dataset.id); return; }
+    });
+  }
   
   // 模型服务管理事件
   $('#btn-add-llm-service').addEventListener('click', () => addNewLLMService());
@@ -1571,6 +1691,20 @@ function bindEvents() {
   $('#btn-paste').addEventListener('click', () => showPasteArea());
   $('#btn-paste-cancel').addEventListener('click', () => hidePasteArea());
   $('#btn-paste-submit').addEventListener('click', () => submitPastedText());
+
+  // 财报解读风格切换
+  $$('.analysis-style-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      $$('.analysis-style-chip').forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      state.analysisReportStyle = chip.dataset.style || 'default';
+      const hint = $('#analysis-style-hint');
+      if (hint) hint.textContent = `当前：${getAnalysisStyleName()}视角解读`;
+    });
+  });
+
+  // 停止分析按钮
+  $('#btn-stop-analysis')?.addEventListener('click', stopAnalysis);
 
   // 打开PDF按钮
   $('#btn-open-pdf').addEventListener('click', () => {
@@ -4288,8 +4422,14 @@ async function selectAnalysisReport(idx) {
 
   state.analysisSelectedReport = report;
 
-  if (state.isAnalyzing) return;
+  // 若正在分析中，先取消当前分析
+  if (state.isAnalyzing) {
+    state.analysisAbortController?.abort();
+    state.isAnalyzing = false;
+  }
   state.isAnalyzing = true;
+  state.analysisAbortController = new AbortController();
+  const signal = state.analysisAbortController.signal;
 
   // 隐藏搜索区和列表，显示loading
   $('.analysis-container').style.display = 'none';
@@ -4315,80 +4455,80 @@ async function selectAnalysisReport(idx) {
     try {
       updateLoading('正在获取利润表...');
       const incomeUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_DMSK_FN_INCOME&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)(REPORT_DATE%3D%27${reportDate}%27)`;
-      const incomeResp = await fetch(incomeUrl);
+      const incomeResp = await fetch(incomeUrl, { signal });
       const incomeResult = await incomeResp.json();
       if (incomeResult?.result?.data?.length) incomeData = incomeResult.result.data[0];
-    } catch (e) { console.log('利润表获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('利润表获取失败:', e); }
 
     // ===== 2. 获取当前报告期资产负债表 =====
     let balanceData = null;
     try {
       updateLoading('正在获取资产负债表...');
       const bsUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_DMSK_FN_BALANCE&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)(REPORT_DATE%3D%27${reportDate}%27)`;
-      const bsResp = await fetch(bsUrl);
+      const bsResp = await fetch(bsUrl, { signal });
       const bsResult = await bsResp.json();
       if (bsResult?.result?.data?.length) balanceData = bsResult.result.data[0];
-    } catch (e) { console.log('资产负债表获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('资产负债表获取失败:', e); }
 
     // ===== 3. 获取当前报告期现金流量表 =====
     let cashflowData = null;
     try {
       updateLoading('正在获取现金流量表...');
       const cfUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_DMSK_FN_CASHFLOW&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)(REPORT_DATE%3D%27${reportDate}%27)`;
-      const cfResp = await fetch(cfUrl);
+      const cfResp = await fetch(cfUrl, { signal });
       const cfResult = await cfResp.json();
       if (cfResult?.result?.data?.length) cashflowData = cfResult.result.data[0];
-    } catch (e) { console.log('现金流量表获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('现金流量表获取失败:', e); }
 
     // ===== 4. 获取当前报告期财务主要指标 =====
     let finMainData = null;
     try {
       updateLoading('正在获取主要财务指标...');
       const finMainUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=1&pageNumber=1&reportName=RPT_F10_FINANCE_MAINFINADATA&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)(REPORT_DATE%3D%27${reportDate}%27)`;
-      const finMainResp = await fetch(finMainUrl);
+      const finMainResp = await fetch(finMainUrl, { signal });
       const finMainResult = await finMainResp.json();
       if (finMainResult?.result?.data?.length) finMainData = finMainResult.result.data[0];
-    } catch (e) { console.log('主要指标获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('主要指标获取失败:', e); }
 
     // ===== 5. 获取多期历史数据（近8期），用于同比环比和趋势分析 =====
     let multiYearData = [];
     try {
       updateLoading('正在获取历史财务趋势...');
       const myUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=12&pageNumber=1&reportName=RPT_F10_FINANCE_MAINFINADATA&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
-      const myResp = await fetch(myUrl);
+      const myResp = await fetch(myUrl, { signal });
       const myResult = await myResp.json();
       if (myResult?.result?.data?.length) multiYearData = myResult.result.data;
-    } catch (e) { console.log('历史趋势数据获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('历史趋势数据获取失败:', e); }
 
     // ===== 6. 获取多期利润表（近8期，覆盖去年同期便于同比对照） =====
     let multiIncomeData = [];
     try {
       updateLoading('正在获取利润表趋势...');
       const miUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=8&pageNumber=1&reportName=RPT_DMSK_FN_INCOME&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
-      const miResp = await fetch(miUrl);
+      const miResp = await fetch(miUrl, { signal });
       const miResult = await miResp.json();
       if (miResult?.result?.data?.length) multiIncomeData = miResult.result.data;
-    } catch (e) { console.log('多期利润表获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('多期利润表获取失败:', e); }
 
     // ===== 7. 获取多期现金流量表（近8期，覆盖去年同期） =====
     let multiCashflowData = [];
     try {
       updateLoading('正在获取现金流趋势...');
       const mcUrl = `https://datacenter-web.eastmoney.com/api/data/v1/get?sortColumns=REPORT_DATE&sortTypes=-1&pageSize=8&pageNumber=1&reportName=RPT_DMSK_FN_CASHFLOW&columns=ALL&filter=(SECURITY_CODE%3D%22${code6}%22)`;
-      const mcResp = await fetch(mcUrl);
+      const mcResp = await fetch(mcUrl, { signal });
       const mcResult = await mcResp.json();
       if (mcResult?.result?.data?.length) multiCashflowData = mcResult.result.data;
-    } catch (e) { console.log('多期现金流获取失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('多期现金流获取失败:', e); }
 
     // ===== 8. 获取实时行情（PE/PB/市值/股价等） =====
     let quoteData = {};
     try {
       updateLoading('正在获取实时行情...');
       const quoteUrl = `https://push2.eastmoney.com/api/qt/ulist.np/get?fltt=2&secids=${secid}&fields=f2,f3,f9,f12,f14,f20,f23,f115&ut=fa5fd1943c7b386f172d6893dbfba10b`;
-      const quoteResp = await fetch(quoteUrl);
+      const quoteResp = await fetch(quoteUrl, { signal });
       const quoteResult = await quoteResp.json();
       if (quoteResult?.data?.diff?.[0]) quoteData = quoteResult.data.diff[0];
-    } catch (e) { console.log('行情接口失败:', e); }
+    } catch (e) { if (e.name === 'AbortError') throw e; console.log('行情接口失败:', e); }
 
     // ===== 9. 构建财报文本 =====
     updateLoading('正在构建财报摘要...');
@@ -4408,15 +4548,18 @@ async function selectAnalysisReport(idx) {
 
     // 10. 交给 LLM 生成解读报告
     state.pdfText = reportText;
-    await generateReport(reportText);
+    await generateReport(reportText, signal);
 
   } catch (e) {
+    if (e.name === 'AbortError') return; // 被取消，静默退出
     hideLoading();
     console.error('财报解读错误:', e);
     showToast('财报解读失败：' + e.message);
     $('.analysis-container').style.display = '';
   } finally {
-    state.isAnalyzing = false;
+    if (state.analysisAbortController?.signal === signal) {
+      state.isAnalyzing = false;
+    }
   }
 }
 
@@ -5018,9 +5161,85 @@ async function startAnalysis() {
   await generateReport(result.text);
 }
 
-async function generateReport(text) {
+// ======================== 财报解读风格辅助函数 ========================
+
+function getActiveAnalysisPrompt() {
+  const style = state.analysisReportStyle || 'default';
+  return FINANCIAL_REPORT_PROMPTS[style] || ANALYSIS_SYSTEM_PROMPT;
+}
+
+function getAnalysisStyleName() {
+  const names = { default: '综合大师视角', zhang: '张氏财务分析' };
+  return names[state.analysisReportStyle] || '综合大师视角';
+}
+
+/** 停止当前财报分析 */
+function stopAnalysis() {
+  state.analysisAbortController?.abort();
+  state.isAnalyzing = false;
+  state.reportMarkdown = '';
+  hideLoading();
+  $('.analysis-container').style.display = '';
+  $('#analysis-result').style.display = 'none';
+  showToast('已停止分析');
+}
+
+/** 刷新报告管理列表 */
+async function refreshReportList() {
+  const reports = await ReportStorage.loadAll();
+  const stats = await ReportStorage.getStats();
+  const statsEl = $('#report-stats-text');
+  if (statsEl) statsEl.textContent = `共 ${stats.total} 份报告（财报解读 ${stats.financial} / 股票分析 ${stats.stock}）`;
+
+  const renderList = (containerSel, items, emptyText) => {
+    const el = $(containerSel);
+    if (!el) return;
+    if (!items.length) {
+      el.innerHTML = `<div class="report-list-empty">${emptyText}</div>`;
+      return;
+    }
+    // 按时间倒序
+    items.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    el.innerHTML = items.map(r => `
+      <div class="report-item" data-id="${r.id}">
+        <div class="report-item-info">
+          <span class="report-item-company">${r.company || '未知'}</span>
+          <span class="report-item-meta">${r.date || ''}${r.style ? ' · ' + r.style : ''}</span>
+        </div>
+        <div class="report-item-actions">
+          <button class="report-item-btn report-view-btn" data-id="${r.id}" title="查看">👁</button>
+          <button class="report-item-btn report-delete-btn" data-id="${r.id}" title="删除">🗑</button>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  const financial = reports.filter(r => r.type === 'financial');
+  const stock = reports.filter(r => r.type === 'stock');
+  renderList('#report-list-financial', financial, '暂无财报解读报告');
+  renderList('#report-list-stock', stock, '暂无股票分析报告');
+}
+
+/** 查看报告（在新Tab中打开） */
+function viewReport(id) {
+  const viewerUrl = chrome.runtime.getURL('sidebar/viewer.html') + '?id=' + encodeURIComponent(id);
+  chrome.tabs.create({ url: viewerUrl });
+}
+
+/** 删除报告 */
+async function deleteReport(id) {
+  const ok = await ReportStorage.delete(id);
+  if (ok) {
+    showToast('报告已删除');
+    refreshReportList();
+  } else {
+    showToast('删除失败');
+  }
+}
+
+async function generateReport(text, signal = null) {
   state.isAnalyzing = true;
-  showLoading('正在分析财报内容，生成解读报告...');
+  showLoading(`正在以${getAnalysisStyleName()}视角分析财报内容...`);
 
   if (!getActiveLLMService()?.apiKey) {
     hideLoading(); showSettings(); showToast('请先配置 LLM API Key');
@@ -5029,12 +5248,31 @@ async function generateReport(text) {
 
   try {
     const truncatedText = truncateText(text, 30000);
-    const userPrompt = `请对以下财报文本进行深度解读分析：\n---\n${truncatedText}\n---\n请严格按照报告模板结构输出。`;
-    const result = await callLLM(ANALYSIS_SYSTEM_PROMPT, userPrompt, true);
+    const styleInstruction = state.analysisReportStyle === 'zhang'
+      ? '请严格按照张氏财务分析框架的6大阶段顺序输出分析报告。'
+      : '请严格按照报告模板结构输出。';
+    const userPrompt = `请对以下财报文本进行深度解读分析：\n---\n${truncatedText}\n---\n${styleInstruction}`;
+    const result = await callLLM(getActiveAnalysisPrompt(), userPrompt, true, 'analysis', signal);
 
     if (result) {
       state.reportMarkdown = result;
       renderReport(result);
+
+      // 自动保存报告
+      const company = state.analysisStock?.name || '未知公司';
+      const code = state.analysisStock?.code || '';
+      saveReportToDisk('financial', company, result);
+      ReportStorage.save({
+        id: `rpt_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+        type: 'financial',
+        company, code,
+        date: new Date().toISOString().slice(0, 10),
+        style: state.analysisReportStyle || 'default',
+        content: result,
+        diskPath: `分析报告/财报解读/${company.replace(/[\\/:*?"<>|]/g, '')}_${new Date().toISOString().slice(0, 10)}.md`,
+        createdAt: Date.now()
+      }).catch(e => console.warn('报告存储失败:', e));
+
       hideLoading();
       $('#analysis-result').style.display = '';
       buildTOC();
@@ -5043,6 +5281,7 @@ async function generateReport(text) {
       throw new Error('LLM调用返回为空');
     }
   } catch (e) {
+    if (e.name === 'AbortError') return; // 被取消，静默退出
     hideLoading();
     console.error('报告生成错误:', e);
     if (e.message.includes('API key') || e.message.includes('401')) {
@@ -5061,7 +5300,7 @@ async function generateReport(text) {
 
 // ======================== LLM API 调用 ========================
 
-async function callLLM(systemPrompt, userMessage, stream = false, streamTarget = 'analysis') {
+async function callLLM(systemPrompt, userMessage, stream = false, streamTarget = 'analysis', signal = null) {
   const service = getActiveLLMService();
   const { baseUrl, apiKey, model } = service;
   if (!apiKey) throw new Error('未配置 API Key');
@@ -5078,7 +5317,8 @@ async function callLLM(systemPrompt, userMessage, stream = false, streamTarget =
   const response = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
+    signal
   });
 
   if (!response.ok) {
@@ -5092,7 +5332,7 @@ async function callLLM(systemPrompt, userMessage, stream = false, streamTarget =
       : streamTarget === 'screener'
       ? (text) => { state.screenerMarkdown = text; renderScreenerReportStreaming(text); }
       : (text) => { state.reportMarkdown = text; renderReportStreaming(text); };
-    return await handleStreamResponse(response, onChunk);
+    return await handleStreamResponse(response, onChunk, signal);
   } else {
     const data = await response.json();
     return data.choices?.[0]?.message?.content || '';
@@ -5130,12 +5370,13 @@ async function callLLMChat(messages) {
   return response;
 }
 
-async function handleStreamResponse(response, onChunk) {
+async function handleStreamResponse(response, onChunk, signal = null) {
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let fullText = '', buffer = '';
 
   while (true) {
+    if (signal?.aborted) { reader.cancel(); return fullText; }
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
@@ -5422,6 +5663,30 @@ function updateTTSBar() {
 
 // ======================== 导出 Markdown ========================
 
+/** 自动保存报告到磁盘 */
+function saveReportToDisk(type, company, markdown) {
+  const subDir = type === 'financial' ? '财报解读' : '股票分析';
+  const date = new Date().toISOString().slice(0, 10);
+  const safeName = company.replace(/[\\/:*?"<>|]/g, '');
+  const filename = `${safeName}_${date}.md`;
+  const fullPath = `/Users/mickshu/分析报告/${subDir}/${filename}`;
+
+  const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+
+  chrome.downloads.download({
+    url, filename: fullPath,
+    conflictAction: 'uniquify', saveAs: false
+  }, () => {
+    if (chrome.runtime.lastError) {
+      console.warn('磁盘保存失败:', chrome.runtime.lastError);
+    }
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  });
+
+  return { subDir, filename, fullPath };
+}
+
 function exportMarkdown(type = 'report') {
   let markdown;
   if (type === 'screener') markdown = state.screenerMarkdown;
@@ -5555,9 +5820,9 @@ function truncateText(text, maxChars) {
   return result;
 }
 
-function showLoading(text) { $('#loading').style.display = ''; $('#loading-text').textContent = text; }
+function showLoading(text) { $('#loading').style.display = ''; $('#loading-text').textContent = text; const sb = $('#btn-stop-analysis'); if (sb) sb.style.display = state.isAnalyzing ? '' : 'none'; }
 function updateLoading(text) { if ($('#loading').style.display !== 'none') $('#loading-text').textContent = text; }
-function hideLoading() { $('#loading').style.display = 'none'; }
+function hideLoading() { $('#loading').style.display = 'none'; const sb = $('#btn-stop-analysis'); if (sb) sb.style.display = 'none'; }
 
 function showToast(message) {
   const existing = document.querySelector('.toast');

@@ -681,6 +681,56 @@ body {
   line-height: 1.4;
 }
 
+/* 财报解读风格选择器 */
+.analysis-style-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  flex-wrap: wrap;
+}
+.analysis-style-label {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  font-weight: 600;
+}
+.analysis-style-chips {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.analysis-style-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+  font-family: inherit;
+}
+.analysis-style-chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+  background: var(--primary-light);
+}
+.analysis-style-chip.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  font-weight: 600;
+}
+.analysis-style-hint {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  font-style: italic;
+  width: 100%;
+}
+
 /* 分析框架折叠区 */
 /* 分析风格选择器 */
 .sa-style-selector {
@@ -3366,4 +3416,114 @@ body {
   font-size: 10px;
   padding: 1px 6px;
   border-radius: 8px;
+}
+
+/* ========== 停止分析按钮 ========== */
+.btn-stop {
+  background: var(--error);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 8px 20px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+.btn-stop:hover {
+  background: var(--accent-dark);
+}
+
+/* ========== 报告管理面板 ========== */
+.report-stats-bar {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.report-dir-info {
+  font-size: 12px;
+  color: var(--text-hint);
+  padding: 6px 10px;
+  background: var(--surface-hover);
+  border-radius: var(--radius);
+  margin-bottom: 16px;
+}
+.report-dir-info code {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.report-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.report-list-empty {
+  font-size: 12px;
+  color: var(--text-hint);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.report-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+}
+.report-item:last-child {
+  margin-bottom: 0;
+}
+
+.report-item-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.report-item-company {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.report-item-meta {
+  font-size: 11px;
+  color: var(--text-hint);
+}
+
+.report-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.report-item-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+  transition: background 0.15s;
+}
+.report-item-btn:hover {
+  background: var(--surface-hover);
+}
+.report-delete-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent);
 }
